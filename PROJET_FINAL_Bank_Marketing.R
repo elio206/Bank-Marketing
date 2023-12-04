@@ -1,0 +1,2740 @@
+########################################################
+######## STEP 1: IMPORT THE DATA SET ##################
+data=read.csv("C:/Users/LF ELEC/Desktop/CNAM/STA- 211/Bank Marketing.csv",
+              na.strings=c("",".","NA","?"))
+
+
+########################################################     
+###### STEP 2: INSERT MISSING VALUES RANDOMLLY #########
+## pour appliquer le pretraitement d'une base de donnee il faut remplacer
+# quelques valeurs par NA aleatoirement : 
+##### variabe 1: $age 
+indices <- sample(1:nrow(data), size = 1220)  # Sélectionne 1220 indices aléatoires
+data$age[indices] <- NA  # Assigner NA aux indices sélectionnés dans la colonne "Age"
+##### variable 2: $job
+indices <- sample(1:nrow(data), size = 4550)  # Sélectionne 4550 indices aléatoires
+data$job[indices] <- NA  # Assigner NA aux indices sélectionnés dans la colonne "job"
+##### variable 3: $education
+indices <- sample(1:nrow(data), size = 3100)  # Sélectionne 3100 indices aléatoires
+data$education[indices] <- NA  # Assigner NA aux indices sélectionnés dans la colonne "education"
+##### variable 4: $default
+indices <- sample(1:nrow(data), size = 5030)  # Sélectionne 5030 indices aléatoires
+data$default[indices] <- NA  # Assigner NA aux indices sélectionnés dans la colonne "default"
+##### variable 5: $balance
+indices <- sample(1:nrow(data), size = 1036)  # Sélectionne 1036 indices aléatoires
+data$balance[indices] <- NA  # Assigner NA aux indices sélectionnés dans la colonne "balance"
+#### variable 6: $loan
+indices <- sample(1:nrow(data), size = 646)  # Sélectionne 646 indices aléatoires
+data$loan[indices] <- NA  # Assigner NA aux indices sélectionnés dans la colonne "loan"
+#### variable 7: $duration
+indices <- sample(1:nrow(data), size = 2146)  # Sélectionne 2146 indices aléatoires
+data$duration[indices] <- NA  # Assigner NA aux indices sélectionnés dans la colonne "duration"
+#### variable 8: $pdays
+indices <- sample(1:nrow(data), size = 4067)  # Sélectionne 4067 indices aléatoires
+data$pdays[indices] <- NA  # Assigner NA aux indices sélectionnés dans la colonne "pdays"
+#### variable 9: $poutcome
+indices <- sample(1:nrow(data), size = 7777)  # Sélectionne 7777 indices aléatoires
+data$poutcome[indices] <- NA  # Assigner NA aux indices sélectionnés dans la colonne "poutcome"
+
+
+## step 2-1 : verifier s'il existe des NA
+complete.cases(data)
+## step 2-2 : verifier s'il existe des duplications
+duplicated(data)
+## step 2-3 : Analyse descriptive de la base de donnee sans NA :
+str(data)
+## step 2-4 : Faire les statistiques descriptives selon la variables cible
+###Methode 1: en utilisant la fonction "summary"
+summary(data)
+###Methode 1: en utilisant la fonction "by"
+by(data, data$y, summary)
+### Mehode 2: en utilisant la fonction "describe"
+library(Hmisc)
+describe(data)
+### Methode 3: en utilisant la fonction "describeBy"
+library(psych)
+describeBy(data,data$y)
+
+#######################################################################
+######### STEP 3: Graphique Representation of NA ############
+############ STEP 3: VISUALISER LES VALEURS MANQUANTES  ##################
+### we will visualize the pourcentage of the missing values in our data
+#methode(1)#utilisant fct vis_miss
+library(visdat)
+vis_miss(data)
+
+#methode(2)#utilisant fct gg_miss_var
+if(!require('naniar')) {
+  install.packages('naniar')
+  library('naniar') }
+library(ggplot2)
+gg_miss_var(data) + labs(y = "Look at all the missing ones")
+
+### to combine these 2 figures together ###
+library(visdat)
+library(naniar)
+library(ggplot2)
+library(gridExtra)
+# Create the first plot using vis_miss()
+plot1 <- vis_miss(data)
+# Create the second plot using gg_miss_var()
+plot2 <- gg_miss_var(data) + labs(y = "Look at all the missing ones")
+# Combine the plots into a single figure
+combined_plot <- grid.arrange(plot1, plot2, ncol = 2)
+# Display the combined plot
+print(combined_plot)
+
+#####################################################################
+############## STEP 4: IMPUTER LES VALEURS MANQUANTES ####################
+###BEFORE WE START TO CLEAN 
+#### WE CAN IMPUTE THESE MISSING VALUES BY DIFFERENT METHODES ###
+### Quantitative variables with NA :
+# "balance","duration","marital","age","pdays"
+### Qualitative variables with NA : 
+# "housing","default","job","poutcome","loan","education"
+
+##METHODE 1 : IMPUTATION SIMPLE:!!#remplacons les NA aleatoirement#!!
+##on peut voir les valeures imputees aleatoirement de chaque variable
+library(Hmisc)
+data_imp_simple=impute(data$balance,"random");data_imp_simple;
+data_imp_simple=impute(data$duration,"random");data_imp_simple;
+data_imp_simple=impute(data$age,"random"); data_imp_simple;
+data_imp_simple=impute(data$pdays,"random"); data_imp_simple;
+data_imp_simple=impute(data$y,"random"); data_imp_simple;
+##pour savoire les valeures imputees aleatoirement
+
+
+##METHODE 2 : IMPUTATION MULTIPLE (MICE):!!#remplacons les NA des variables#!!
+##REMARGE : IL FAUT CONSIDER LES VARIABLES QUALITATIVES COME DES FACTEURS
+##SI ON NE LES CONSIDERE PAS COMME FACTEURS LA LIBRAIRIE MICE NE FONCTIONNE PAS
+#SUR CES VARIABLES
+data$housing=as.factor(data$housing)
+data$default=as.factor(data$default)
+data$job=as.factor(data$job)
+data$poutcome=as.factor(data$poutcome)
+data$loan=as.factor(data$loan)
+data$education=as.factor(data$education)
+data$marital=as.factor(data$marital)
+data$contact=as.factor(data$contact)
+data$month=as.factor(data$month)
+
+
+library(mice)
+data_imp_multiple = mice(data,m =5, seed=1,meth='pmm', 
+                      print = FALSE,remove_collinear=FALSE,maxit = 5)
+##on peut visualiser les valeurs imputees et dans quelle methodes
+data_imp_multiple$imp
+data_imp_multiple$method
+data_imp_multiple$predictorMatrix
+
+
+#########################################################################
+######### STEP 5: COMPARE THE DATA BEFORE & AFTER IMPUTATION ###############
+# Inspecting the distribution of original and imputed data #
+####1st: WE CAN SEE THE 5 IMPUTED TABLES FOR EACH VARIABLE WITH "NA" (multiple imputation)
+library(mice)
+##to check the imputation of variable "balance"
+data_imp_multiple$imp$balance
+##to check the imputation of variable "duration"
+data_imp_multiple$imp$duration
+##to check the imputation of variable "age"
+data_imp_multiple$imp$age
+##to check the imputation of variable "pdays"
+data_imp_multiple$imp$pdays
+##to check the imputation of variable "housing"
+data_imp_multiple$imp$housing
+##to check the imputation of variable "default"
+data_imp_multiple$imp$default
+##to check the imputation of variable "job"
+data_imp_multiple$imp$job
+##to check the imputation of variable "poutcome"
+data_imp_multiple$imp$poutcome
+##to check the imputation of variable "loan"
+data_imp_multiple$imp$loan
+##to check the imputation of variable "education"
+data_imp_multiple$imp$education
+
+####2nd: VISUALIZATION USING DIFFERENT METHODS
+#Let’s compare the distributions of original and imputed data using a some useful plots.
+#First of all we can use a scatterplot and plot "y" against all the other variables
+
+##since it's imputation multiple sO we have 5 different tables 
+##Using "complete" function we can go back to the complete table without NA and make comparision
+#EXAMPLE: TABLE 1 : imputed (exists 5 titables since multiple imputation)
+completedData <- complete(data_imp_multiple,1)
+#-----------------------------------------------------------------------#
+######### METHODE 1 OF VISUALIZATION : 
+# only for numeric variables :
+data_imp_multiple$balance <- as.numeric(data_imp_multiple$balance)
+data_imp_multiple$duration <- as.numeric(data_imp_multiple$duration)
+data_imp_multiple$age <- as.numeric(data_imp_multiple$age)
+data_imp_multiple$pdays <- as.numeric(data_imp_multiple$pdays)
+data_imp_multiple$y <- as.numeric(data_imp_multiple$y)
+
+library(mice) 
+library(lattice)
+#### pour les variables explicatives quantitatives
+bwplot(data_imp_multiple,y ~balance+duration+age+pdays,pch=18,cex=1)
+### pour les variables explicatives qualitatives
+bwplot(data_imp_multiple,y~housing+default+job+poutcome+loan+education,pch=18,cex=1)
+#What we would like to see is that the shape of the magenta points (imputed) matches the shape
+#of the blue ones (observed). The matching shape tells us that the imputed values are indeed “plausible values”.
+######### METHODE 2 OF VISUALIZATION
+densityplot(data_imp_multiple)
+#The density of the imputed data for each imputed dataset is showed in magenta while the density
+#of the observed data is showed in blue. Again, under our previous assumptions we expect the distributions to be similar.
+
+##--------------------------------------------------------------#####
+##---------------------------------------------------------------#####
+########## Another helpful plot is the density plot:
+##--------------------------------------------------------------#####
+##---------------------------------------------------------------#####
+
+#EXAMPLE: TABLE 2 : imputed (exists 5 tables since multiple imputation)
+completedData <- complete(data_imp_multiple,2)
+#------------------------------------------------------------#
+######### METHODE 1 OF VISUALIZATION
+# only for numeric variables :
+library(mice)
+library(lattice)
+#### pour les variables explicatives quantitatives
+bwplot(data_imp_multiple,y ~balance+duration+age+pdays,pch=18,cex=1)
+### pour les variables explicatives qualitatives
+bwplot(data_imp_multiple,y~housing+default+job+poutcome+loan+education,pch=18,cex=1)
+#What we would like to see is that the shape of the magenta points (imputed) matches the shape
+#of the blue ones (observed). The matching shape tells us that the imputed values are indeed “plausible values”.
+######### METHODE 2 OF VISUALIZATION
+densityplot(data_imp_multiple)
+#The density of the imputed data for each imputed dataset is showed in magenta while the density
+#of the observed data is showed in blue. Again, under our previous assumptions we expect the distributions to be similar.
+
+
+###########################################################
+########## STEP 6: ANALYSE DESCRIPTIVE UNIVARIEE :
+### Travaillons par une base de donnee netoyee
+## step 6-1 : Eliminerles valeurs manquantes NA 
+d=na.omit(data)
+## step 6-2 : Eliminer les  duplications
+d=unique(data)
+## step 6-3 : Analyse descriptive de la base de donnee sans NA :
+str(d)          
+## step 1-4 : Faire les statistiques descriptives selon la variables cible
+###Methode 1: en utilisant la fonction "summary"
+summary(d)
+###Methode 1: en utilisant la fonction "by"
+by(data, data$y, summary)
+### Mehode 2: en utilisant la fonction "describe"
+library(Hmisc)
+describe(data)
+### Methode 3: en utilisant la fonction "describeBy"
+library(psych)
+describeBy(data,data$y)
+# stp 6-4: trouver la frequence du variable cible
+### puisque le nbr d'obs ayant y=0(39922 ind) sont plus grands 
+# que (5289 ind) ceux ayant y=1
+# alors notre base de donnee est desequilibree (unbalanced)
+freq=table(data$y)
+freq
+
+
+#######################################################################
+############### STEP 7: GRAPHICAL REPRESENTATION
+#### step 7-1: POUR LES VARIABLES Qualitative :
+#"job", "marital", "education" "default"
+#"housing" "loan" "contact" "month" "poutcome"
+
+####################### VARIABLE: MARITAL ######################
+#-->Methode 1:
+#Diagramme en barres : pour représenter graphiquement les fréquences des 
+#différentes catégories de chaque variable qualitative.
+# Exemple : Diagramme en barres de la variable 'marital'
+library(ggplot2)
+bar_plot_1=ggplot(data, aes(x=reorder(marital, marital, function(x)-length(x)))) +
+  geom_bar(fill='#D4D400') +  labs(x='maritual status')
+
+
+###-->Methode 2:
+#Diagramme en nuage de points coloré : pour exainer la relation entre une variable
+# qualitative et une quantitative en utilisant un diagramme en nuage de points 
+#coloré pour visualiser la distribution des valeurs quantitatives en
+#fonction des catégories de la variable qualitative.
+library(ggplot2)
+scatter_plot_1=ggplot(data, aes(x = y , y = marital, color = marital)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(bar_plot_1, scatter_plot_1, ncol = 2)
+
+
+
+
+####################### VARIABLE: JOB ######################
+#-->Methode 1:
+#Diagramme en barres : pour représenter graphiquement les fréquences des 
+#différentes catégories de chaque variable qualitative.
+# Exemple : Diagramme en barres de la variable 'marital'
+library(ggplot2)
+bar_plot_2=ggplot(data, aes(x=reorder(job, job, function(x)-length(x)))) +
+  geom_bar(fill='#D4D400') +  labs(x='Job status')
+
+
+###-->Methode 2:
+#Diagramme en nuage de points coloré : pour exainer la relation entre une variable
+# qualitative et une quantitative en utilisant un diagramme en nuage de points 
+#coloré pour visualiser la distribution des valeurs quantitatives en
+#fonction des catégories de la variable qualitative.
+library(ggplot2)
+scatter_plot_2=ggplot(data, aes(x = y , y = job, color = marital)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(bar_plot_2, scatter_plot_2, ncol = 2)
+
+
+####################### VARIABLE: Education ######################
+#-->Methode 1:
+#Diagramme en barres : pour représenter graphiquement les fréquences des 
+#différentes catégories de chaque variable qualitative.
+# Exemple : Diagramme en barres de la variable 'marital'
+library(ggplot2)
+bar_plot_3=ggplot(data, aes(x=reorder(education, education, function(x)-length(x)))) +
+  geom_bar(fill='#D4D400') +  labs(x='Education status')
+
+
+###-->Methode 2:
+#Diagramme en nuage de points coloré : pour exainer la relation entre une variable
+# qualitative et une quantitative en utilisant un diagramme en nuage de points 
+#coloré pour visualiser la distribution des valeurs quantitatives en
+#fonction des catégories de la variable qualitative.
+library(ggplot2)
+scatter_plot_3=ggplot(data, aes(x = y , y = education, color = marital)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(bar_plot_3, scatter_plot_3, ncol = 2)
+
+
+
+####################### VARIABLE: DEFAULT ######################
+#-->Methode 1:
+#Diagramme en barres : pour représenter graphiquement les fréquences des 
+#différentes catégories de chaque variable qualitative.
+# Exemple : Diagramme en barres de la variable 'marital'
+library(ggplot2)
+bar_plot_4=ggplot(data, aes(x=reorder(default, default, function(x)-length(x)))) +
+  geom_bar(fill='#D4D400') +  labs(x='Default status')
+
+
+###-->Methode 2:
+#Diagramme en nuage de points coloré : pour exainer la relation entre une variable
+# qualitative et une quantitative en utilisant un diagramme en nuage de points 
+#coloré pour visualiser la distribution des valeurs quantitatives en
+#fonction des catégories de la variable qualitative.
+library(ggplot2)
+scatter_plot_4=ggplot(data, aes(x = y , y = default, color = marital)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(bar_plot_4, scatter_plot_4, ncol = 2)
+
+
+
+
+####################### VARIABLE: HOUSING ######################
+#-->Methode 1:
+#Diagramme en barres : pour représenter graphiquement les fréquences des 
+#différentes catégories de chaque variable qualitative.
+# Exemple : Diagramme en barres de la variable 'marital'
+library(ggplot2)
+bar_plot_5=ggplot(data, aes(x=reorder(housing, housing, function(x)-length(x)))) +
+  geom_bar(fill='#D4D400') +  labs(x='Housing status')
+
+
+###-->Methode 2:
+#Diagramme en nuage de points coloré : pour exainer la relation entre une variable
+# qualitative et une quantitative en utilisant un diagramme en nuage de points 
+#coloré pour visualiser la distribution des valeurs quantitatives en
+#fonction des catégories de la variable qualitative.
+library(ggplot2)
+scatter_plot_5=ggplot(data, aes(x = y , y = housing, color = marital)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(bar_plot_5, scatter_plot_5, ncol = 2)
+
+
+
+####################### VARIABLE: LOAN ######################
+#-->Methode 1:
+#Diagramme en barres : pour représenter graphiquement les fréquences des 
+#différentes catégories de chaque variable qualitative.
+# Exemple : Diagramme en barres de la variable 'marital'
+library(ggplot2)
+bar_plot_6=ggplot(data, aes(x=reorder(loan, loan, function(x)-length(x)))) +
+  geom_bar(fill='#D4D400') +  labs(x='Loan status')
+
+
+###-->Methode 2:
+#Diagramme en nuage de points coloré : pour exainer la relation entre une variable
+# qualitative et une quantitative en utilisant un diagramme en nuage de points 
+#coloré pour visualiser la distribution des valeurs quantitatives en
+#fonction des catégories de la variable qualitative.
+library(ggplot2)
+scatter_plot_6=ggplot(data, aes(x = y , y = loan, color = marital)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(bar_plot_6, scatter_plot_6, ncol = 2)
+
+
+
+
+####################### VARIABLE: CONTACT ######################
+#-->Methode 1:
+#Diagramme en barres : pour représenter graphiquement les fréquences des 
+#différentes catégories de chaque variable qualitative.
+# Exemple : Diagramme en barres de la variable 'marital'
+library(ggplot2)
+bar_plot_7=ggplot(data, aes(x=reorder(contact, contact, function(x)-length(x)))) +
+  geom_bar(fill='#D4D400') +  labs(x='Contact status')
+
+
+###-->Methode 2:
+#Diagramme en nuage de points coloré : pour exainer la relation entre une variable
+# qualitative et une quantitative en utilisant un diagramme en nuage de points 
+#coloré pour visualiser la distribution des valeurs quantitatives en
+#fonction des catégories de la variable qualitative.
+library(ggplot2)
+scatter_plot_7=ggplot(data, aes(x = y , y = contact, color = marital)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(bar_plot_7, scatter_plot_7, ncol = 2)
+
+
+
+####################### VARIABLE: MONTH ######################
+#-->Methode 1:
+#Diagramme en barres : pour représenter graphiquement les fréquences des 
+#différentes catégories de chaque variable qualitative.
+# Exemple : Diagramme en barres de la variable 'marital'
+library(ggplot2)
+bar_plot_8=ggplot(data, aes(x=reorder(month, month, function(x)-length(x)))) +
+  geom_bar(fill='#D4D400') +  labs(x='month')
+
+
+###-->Methode 2:
+#Diagramme en nuage de points coloré : pour exainer la relation entre une variable
+# qualitative et une quantitative en utilisant un diagramme en nuage de points 
+#coloré pour visualiser la distribution des valeurs quantitatives en
+#fonction des catégories de la variable qualitative.
+library(ggplot2)
+scatter_plot_8=ggplot(data, aes(x = y , y = month, color = marital)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(bar_plot_8, scatter_plot_8, ncol = 2)
+
+
+
+####################### VARIABLE: POUTCOME ######################
+#-->Methode 1:
+#Diagramme en barres : pour représenter graphiquement les fréquences des 
+#différentes catégories de chaque variable qualitative.
+# Exemple : Diagramme en barres de la variable 'marital'
+library(ggplot2)
+bar_plot_9=ggplot(data, aes(x=reorder(poutcome, poutcome, function(x)-length(x)))) +
+  geom_bar(fill='#D4D400') +  labs(x='month')
+
+
+###-->Methode 2:
+#Diagramme en nuage de points coloré : pour exainer la relation entre une variable
+# qualitative et une quantitative en utilisant un diagramme en nuage de points 
+#coloré pour visualiser la distribution des valeurs quantitatives en
+#fonction des catégories de la variable qualitative.
+library(ggplot2)
+scatter_plot_9=ggplot(data, aes(x = y , y = poutcome, color = marital)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(bar_plot_9, scatter_plot_9, ncol = 2)
+
+
+
+#######################################################################
+############ STEP 7 : GRAPHICAL REPRESENTATION
+### step 7-2: POUR LES VARIABLES  Quantitatives  :
+#"age","balance","duration","campaign","pdays","previous"
+data_quanti=data[,c("age","balance","duration","campaign","pdays","previous")]
+
+
+#########################  VARIABLE : AGE ########################
+par(mfrow=c(1,3))
+#####METHODE 1: HISTOGRAMME + EFFECTIFS
+#Le premier, sans modifier le nombre de classes et en indiquant les effectifs de celles-ci 
+hist(data$age, breaks = "Sturges",col = "orange", border = "black",main = 'AGE',
+     xlab = "age values", ylab = "Effectifs",labels = TRUE)
+
+#Le second indique les fréquences relatives grâce à l’argument proba = TRUE qui nous
+#permet de rajouter une ligne de densité. 
+#Observez que nous avons aussi changé le nombre de classes avec l’option nclass=x:
+#####METHODE 2: HISTOGRAMME + DENSITE
+hist(data$age, nclass=8, col = '#F29D4B',border = "black",main = "Age" ,
+     xlab = "age values", ylab = "Densité",proba = TRUE)
+lines(density(data$age, na.rm = TRUE), lwd = 2, col ="black" )
+
+####METHODE 3 :Box plot 
+boxplot(data$age, main = "level of risky auto",xlab = "level of risk", ylab = "Risk",
+        col = "orange", border ="black",horizontal = TRUE, notch = TRUE)
+
+
+
+#########################  VARIABLE : BALANCE ########################
+par(mfrow=c(1,3))
+#####METHODE 1: HISTOGRAMME + EFFECTIFS
+#Le premier, sans modifier le nombre de classes et en indiquant les effectifs de celles-ci 
+hist(data$balance, breaks = "Sturges",col = "orange", border = "black",main = 'BALANCE',
+     xlab = "age values", ylab = "Effectifs",labels = TRUE)
+
+#Le second indique les fréquences relatives grâce à l’argument proba = TRUE qui nous
+#permet de rajouter une ligne de densité.
+#Observez que nous avons aussi changé le nombre de classes avec l’option nclass=x:
+#####METHODE 2: HISTOGRAMME + DENSITE
+hist(data$balance, nclass=8, col = '#F29D4B',border = "black",main = "Balance" ,
+     xlab = "Balance values", ylab = "Densité",proba = TRUE)
+lines(density(data$balance, na.rm = TRUE), lwd = 2, col ="black" )
+
+####METHODE 3 :Box plot 
+boxplot(data$balance, main = "Balance distribution",xlab = "balance values",
+        col = "orange", border ="black",horizontal = TRUE, notch = TRUE)
+
+
+#########################  VARIABLE : DURATION ########################
+par(mfrow=c(1,3))
+#####METHODE 1: HISTOGRAMME + EFFECTIFS
+#Le premier, sans modifier le nombre de classes et en indiquant les effectifs de celles-ci 
+hist(data$duration, breaks = "Sturges",col = "orange", border = "black",main = 'DURATION',
+     xlab = "Duration values", ylab = "Effectifs",labels = TRUE)
+
+#Le second indique les fréquences relatives grâce à l’argument proba = TRUE qui nous
+#permet de rajouter une ligne de densité. Observez que nous avons aussi changé le nombre de classes avec l’option nclass=x:
+#####METHODE 2: HISTOGRAMME + DENSITE
+hist(data$duration, nclass=8, col = '#F29D4B',border = "black",main = "Duration" ,
+     xlab = "Duration values", ylab = "Densité",proba = TRUE)
+lines(density(data$duration, na.rm = TRUE), lwd = 2, col ="black" )
+
+####METHODE 3 :Box plot 
+boxplot(data$duration, main = "Duration distribution",xlab = "Duration values",
+        col = "orange", border ="black",horizontal = TRUE, notch = TRUE)
+
+#### REMARQUE:
+## On remarque que la variable "duration" est forttement liee a la variable cible
+library(ggplot2)
+scatter_plot_0=ggplot(data, aes(x = y , y = duration, color = job)) +
+  geom_jitter()
+
+library(ggplot2)
+scatter_plot_00=ggplot(data, aes(x = y , y = duration, color = marital)) +
+  geom_jitter()
+
+library(ggplot2)
+scatter_plot_000=ggplot(data, aes(x = y , y = duration, color = education)) +
+  geom_jitter()
+
+
+# Combine the two figures m( methode 1 & 2)
+library(ggplot2)
+library(gridExtra)
+combined_plot <- grid.arrange(scatter_plot_0,scatter_plot_00,
+                              scatter_plot_000 ,ncol = 3)
+
+
+
+#########################  VARIABLE : DAY ########################
+par(mfrow=c(1,3))
+#####METHODE 1: HISTOGRAMME + EFFECTIFS
+#Le premier, sans modifier le nombre de classes et en indiquant les effectifs de celles-ci 
+hist(data$day, breaks = "Sturges",col = "orange", border = "black",main = 'Day',
+     xlab = "Days", ylab = "Effectifs",labels = TRUE)
+
+#Le second indique les fréquences relatives grâce à l’argument proba = TRUE qui nous
+#permet de rajouter une ligne de densité. 
+#Observez que nous avons aussi changé le nombre de classes avec l’option nclass=x:
+#####METHODE 2: HISTOGRAMME + DENSITE
+hist(data$duration, nclass=8, col = '#F29D4B',border = "black",main = "Day" ,
+     xlab = "Days", ylab = "Densité",proba = TRUE)
+lines(density(data$day, na.rm = TRUE), lwd = 2, col ="black" )
+
+####METHODE 3 :Box plot 
+boxplot(data$day, main = "Duration distribution",xlab = "Day",
+        col = "orange", border ="black",horizontal = TRUE, notch = TRUE)
+
+
+
+
+#########################  VARIABLE : CAMPAIGN ########################
+par(mfrow=c(1,3))
+#####METHODE 1: HISTOGRAMME + EFFECTIFS
+#Le premier, sans modifier le nombre de classes et en indiquant les effectifs de celles-ci 
+hist(data$campaign, breaks = "Sturges",col = "orange", border = "black",main = "campaign",
+     xlab = "campaign", ylab = "Effectifs",labels = TRUE)
+
+#Le second indique les fréquences relatives grâce à l’argument proba = TRUE qui nous
+#permet de rajouter une ligne de densité.
+#Observez que nous avons aussi changé le nombre de classes avec l’option nclass=x:
+#####METHODE 2: HISTOGRAMME + DENSITE
+hist(data$campaign, nclass=8, col = '#F29D4B',border = "black", main = "campaign",
+     xlab = "Campaign", ylab = "Densité",proba = TRUE)
+lines(density(data$campaign, na.rm = TRUE), lwd = 2, col ="black" )
+
+####METHODE 3 :Box plot 
+boxplot(data$campaign, main = "Campaign distribution",xlab = "ca,paign",
+        col = "orange", border ="black",horizontal = TRUE, notch = TRUE)
+
+
+#########################  VARIABLE : PDAYS########################
+par(mfrow=c(1,3))
+#####METHODE 1: HISTOGRAMME + EFFECTIFS
+#Le premier, sans modifier le nombre de classes et en indiquant les effectifs de celles-ci 
+hist(data$pdays, breaks = "Sturges",col = "orange", border = "black",main = "pdays",
+     xlab = "pdays", ylab = "Effectifs",labels = TRUE)
+
+#Le second indique les fréquences relatives grâce à l’argument proba = TRUE qui nous
+#permet de rajouter une ligne de densité.
+#Observez que nous avons aussi changé le nombre de classes avec l’option nclass=x:
+#####METHODE 2: HISTOGRAMME + DENSITE
+hist(data$pdays, nclass=8, col = '#F29D4B',border = "black", main = "pdays",
+     xlab = "pdays", ylab = "Densité",proba = TRUE)
+lines(density(data$pdays, na.rm = TRUE), lwd = 2, col ="black" )
+
+####METHODE 3 :Box plot 
+boxplot(data$pdays, main = "pdays distribution",xlab = "pdays",
+        col = "orange", border ="black",horizontal = TRUE, notch = TRUE)
+
+
+
+#########################  VARIABLE : Previous ########################
+par(mfrow=c(1,3))
+#####METHODE 1: HISTOGRAMME + EFFECTIFS
+#Le premier, sans modifier le nombre de classes et en indiquant les effectifs de celles-ci 
+hist(data$previous, breaks = "Sturges",col = "orange", border = "black",main = "Previous",
+     xlab = "previous", ylab = "Effectifs",labels = TRUE)
+
+#Le second indique les fréquences relatives grâce à l’argument proba = TRUE qui nous
+#permet de rajouter une ligne de densité. 
+#Observez que nous avons aussi changé le nombre de classes avec l’option nclass=x:
+#####METHODE 2: HISTOGRAMME + DENSITE
+hist(data$previous, nclass=8, col = '#F29D4B',border = "black", main = "previous",
+     xlab = "previous", ylab = "Densité",proba = TRUE)
+lines(density(data$previous, na.rm = TRUE), lwd = 2, col ="black" )
+
+####METHODE 3 :Box plot 
+boxplot(data$previous, main = "pdays distribution",xlab = "previous",
+        col = "orange", border ="black",horizontal = TRUE, notch = TRUE)
+
+
+
+
+##################################################################
+############ STEP 8: Trouver la relation entre les variables 
+#### step 8-1: POUR LES VARIABLES QUALITATIVES
+data_quali <- data[, c("job","marital","education","default","housing",
+                       "loan","contact","month","poutcome")]
+
+## GRAPHE 1:
+#Tableaux de contingence : pour visualiser les fréquences et les relations
+#entre les catégories: l'interprétation du test du chi carré est :
+#-->si la valeur de p (p-value) est inférieure  0,05 alors :
+#il y a une association significative entre les variables étudiées 
+#alors on rejette l'hypothèse nulle   
+
+t1=table(data$job, data$y)
+# Effectuer le test du chi carré
+chi_square_test_t1 <- chisq.test(t1)
+# Afficher les résultats du test du chi carré
+print(chi_square_test_t1)
+
+t2=table(data$marital, data$y)
+# Effectuer le test du chi carré
+chi_square_test_t2 <- chisq.test(t2)
+# Afficher les résultats du test du chi carré
+print(chi_square_test_t2)
+
+t3=table(data$education, data$y)
+# Effectuer le test du chi carré
+chi_square_test_t3 <- chisq.test(t3)
+# Afficher les résultats du test du chi carré
+print(chi_square_test_t3)
+
+
+t4=table(data$default, data$y)
+# Effectuer le test du chi carré
+chi_square_test_t4 <- chisq.test(t4)
+# Afficher les résultats du test du chi carré
+print(chi_square_test_t4)
+
+
+t5=table(data$housing, data$y)
+# Effectuer le test du chi carré
+chi_square_test_t5 <- chisq.test(t5)
+# Afficher les résultats du test du chi carré
+print(chi_square_test_t5)
+
+
+t6=table(data$loan, data$y)
+# Effectuer le test du chi carré
+chi_square_test_t6 <- chisq.test(t6)
+# Afficher les résultats du test du chi carré
+print(chi_square_test_t6)
+
+
+t7=table(data$contact, data$y)
+# Effectuer le test du chi carré
+chi_square_test_t7 <- chisq.test(t7)
+# Afficher les résultats du test du chi carré
+print(chi_square_test_t7)
+
+t8=table(data$month, data$y)
+# Effectuer le test du chi carré
+chi_square_test_t8 <- chisq.test(t8)
+# Afficher les résultats du test du chi carré
+print(chi_square_test_t8)
+
+
+t9=table(data$poutcome, data$y)
+# Effectuer le test du chi carré
+chi_square_test_t9 <- chisq.test(t9)
+# Afficher les résultats du test du chi carré
+print(chi_square_test_t9)
+
+# Créer un dataframe pour stocker les résultats
+results <- data.frame(Test = c("t1", "t2", "t3", "t4", "t5", "t6", "t7", "t8", "t9"),
+                      X.squared = c(chi_square_test_t1$statistic, chi_square_test_t2$statistic, chi_square_test_t3$statistic,
+                                    chi_square_test_t4$statistic, chi_square_test_t5$statistic, chi_square_test_t6$statistic,
+                                    chi_square_test_t7$statistic, chi_square_test_t8$statistic, chi_square_test_t9$statistic),
+                      df = c(chi_square_test_t1$parameter, chi_square_test_t2$parameter, chi_square_test_t3$parameter,
+                             chi_square_test_t4$parameter, chi_square_test_t5$parameter, chi_square_test_t6$parameter,
+                             chi_square_test_t7$parameter, chi_square_test_t8$parameter, chi_square_test_t9$parameter),
+                      p.value = c(chi_square_test_t1$p.value, chi_square_test_t2$p.value, chi_square_test_t3$p.value,
+                                  chi_square_test_t4$p.value, chi_square_test_t5$p.value, chi_square_test_t6$p.value,
+                                  chi_square_test_t7$p.value, chi_square_test_t8$p.value, chi_square_test_t9$p.value))
+
+# Afficher le tableau des résultats
+print(results)
+
+
+
+################################################################
+###### STEP 8-2:POUR LES VARIABLES QUANTITATIVES :
+data_quanti <- data[, c("age","balance","day","duration",
+                        "campaign","pdays","previous")]
+
+par(mfrow=c(1,1))
+######### POUR LES VARIABLES QUANTITATIVES :
+#### Methode 1: en utilisant librairie "corrplot"
+library(corrplot)
+# Calculer la matrice de corrélation
+correlation_matrix <- cor(data_quanti)
+# Créer le graphique de corrélation
+corrplot(correlation_matrix, method = "color")
+
+#METHODE 2: TO SEE THE RELATION BETWEEN THE VARIABLES
+library(ggplot2)
+library(ggcorrplot)
+# Calculer la matrice de corrélation
+correlation_matrix <- cor(data_quanti)
+# Creer le plot de la matrice en utilisant "ggcorrplot"
+ggcorrplot(correlation_matrix, type = "lower", lab = TRUE)
+
+
+#### Methode 3: en utilisant librairie "headmaply"
+library(data.table)
+library(heatmaply)
+# Convertir votre base de données en objet data.table
+dt <- as.data.table(data_quanti)
+# Calculer la matrice de corrélation
+correlation_matrix <- cor(dt)
+# Créer la heatmap interactive
+heatmaply(correlation_matrix)
+
+
+######## METHODE 4: Analyse factorielle "ACP"
+#1) Effectuer l'ACP sur une base de donnee normalisee
+pca <- prcomp(data_quanti, scale = TRUE)
+#2) Visualiser les résultats
+### le biplot nous donne un graphe a 2 dimension pour visualizer en meme temps
+##-->la relation entre les observations: sous forme de points
+##-->la relation entre les variables: sous forme de flèches
+biplot(pca, cex = 0.8)
+#3) Standardiser les données
+data_std <- scale(data_quanti)
+#4) Effectuer la PCA
+pca <- prcomp(data_std)
+#5) Obtenir les proportions de variance expliquée par chaque composante principale
+prop_var <- pca$sdev^2 / sum(pca$sdev^2)
+#6) Afficher le graphique de la variance expliquée
+plot(prop_var, type="b", xlab="Composante principale", ylab="Proportion de variance expliquée")
+
+
+
+
+
+
+data=read.csv("C:/Users/ebouserhal/Desktop/cv/STA211/bank.csv",
+              na.strings=c("",".","NA","?"))
+#########################################################################
+############ STEP 9: CLASSIFICATION DU VARIABLES
+# on veux reduire la dimension de notre base de donne pour savoir les quelles
+# sont les variables les plus signifcatives pour notre etude
+
+## tout d'abord on doit diviser la base de donnee en 2 :
+### la base de donnee quantitative :
+data_quanti <- data[, c("age","balance","day","duration",
+                        "campaign","pdays","previous")]
+
+### la base de donnee qualitative :
+data_quali <- data[, c("job","marital","education","default","housing",
+                       "loan","contact","month","poutcome")]
+
+# centrer reduire les var quantitatives et centrer les variables qualitatives par pcamix
+library(PCAmixdata)
+obj <- PCAmix( X.quanti = data_quanti, X.quali = data_quali, ndim = 2,
+               rename.level = TRUE ) #car existe des var ayant les meme modalitees
+obj$eig
+# Coefficients du premiere composante principale
+obj$coef$dim1
+# Coefficients du deusieme composante principale
+obj$coef$dim2
+
+# F score des individus
+F <- obj$scores
+head(F)
+# A1 score des v. quanti
+A1 <- obj$quanti.cor
+head(A1)
+# A2 score des v. qualitatives
+A2 <- obj$categ.coord
+head(A2)
+
+# Graphique Composantes principales scores des individus
+plot(obj, choice = "ind")
+
+# Graphique Composantes principales scores des variables quantitatives
+plot(obj, choice = "cor")
+
+#Graphique Composantes principales map with factor scores des variables qualitatives
+plot(obj, choice = "levels")
+
+# contributions of the variables
+# carree des correlation pour les v. quantitatives et ratio de correlation pour les qualitatives
+obj$sqload
+
+plot(obj, choice = "sqload")
+# On peut laisser des ind en illustrative et les positionner sur le nouveau plan
+
+############# METHODE 1: POUR FAIRE LA CLASSIFICATON AVEC "HCLUSTVAR" ####
+##ETAPE 1: c'est de divise la base de donnee en quali & quanti
+library(ClustOfVar)
+#require(ClustOfVar)
+tree=hclustvar(X.quanti=data_quanti)
+plot(tree,main="Dendrogram of ClustOfVar")
+#ETAPE 2: SAVOIR LE NOMBRE DE CLASSE K=?
+#stabilite de nombre de classe par utilisation de 100 boostrap
+stab<-stability(tree,B=100)
+plot(stab,main="Stability of the partitions")
+# on voit la stabilitie a 3 classes: donc partition a 3 classes
+
+
+#ETAPE 3: OBTENIR LA CORRELATION DANS CHAQUE CLUSTER
+#pour trouver les variables latentes on remarque:
+###  cluster 1--> contient 2 variables: age, balance
+###  cluster 2--> contient 2 variables: day, campaign, duration
+##  cluster 3--> cintient 3 cariables: pdays. previous
+P3 <- cutreevar(tree,3)
+summary(P3)
+round(P3$scores,digit=2)
+# cela donne les variables synthetiques quantitatives des 4 classes qui sont:
+# "age","balance", "day", "campaign", "pdays", "previous"
+
+# les correlations entre les variables et les composantes latentes
+P3$var$cluster1      #les variables synthetiques quantitatives du cluster 1
+P3$var$cluster2      #les variables synthetiques quantitatives du cluster 2
+P3$var$cluster3      #les variables synthetiques quantitatives du cluster 3
+
+
+################ METHDE 2: POUR FAIRE LA CLASSIFICATION AVEC "KMEANS" ########
+# score selon kmeans via ClustOfVar
+library(ClustOfVar)
+km <- kmeansvar(X.quanti = data_quanti, init = 3, nstart = 1) #nbt of cluster=3
+
+#list of var in each cluster
+km$var
+###  cluster 1--> contient 2 variables: age, balance
+###  cluster 2--> contient 2 variables: day, campaign, duration
+##  cluster 3--> cintient 3 cariables: pdays, previous
+
+#Qualite de classification:
+km$E
+
+Y <- km$scores #synthetic variables of ClustOfVar
+head(Y)
+
+#pplique une Analyse Discriminante Linéaire (ADL) sur les variables latentes
+#résultantes en utilisant :
+#1)ClustOfVar function "Kmaens"
+
+
+###### CAS 1: Appliquons LDA sur les variables latentes
+#(en anglais= synthetic variables)
+### en utilisant la fonction "clustofvar"
+
+## LDA on the synthetic variables of ClustOfVar with 
+#leave one out cross validation
+library(MASS)
+pred1 <- lda(Y, data$y, CV = TRUE)$class
+head(Y)
+## POUR TROUVER LE TAUX D'ERREUR
+sum(pred1 != data$y)/150 #Error rate
+
+
+
+
+
+#############---------------------------------####################
+#############---------------------------------####################
+#############---------------------------------####################
+#############---------------------------------####################
+
+
+
+######## Pour selectionner les variables les plus significative
+# en utilisant la fonction "BORUTA"
+
+# Etape 1:Load required libraries
+library(Boruta)
+
+# Etape 2:Convertir les variables qualitative en facteurs :
+data$y <- ifelse(data$y == "yes", 1, 0)
+data$default <- ifelse(data$default == "yes", 1, 0)
+data$housing <- ifelse(data$housing == "yes", 1, 0)
+data$loan <- ifelse(data$loan == "yes", 1, 0)
+data$job <- as.factor(data$job) #contenant 12 modalitees
+data$poutcome <- as.factor(data$poutcome) #contenant 3 modalitees
+data$education <- as.factor(data$education)  #contenant 4 modalites
+data$marital <- as.factor(data$marital) #contenant 3 modalitees
+data$contact <- as.factor(data$contact) #contenant 3 modalitees
+data$month <- as.factor(data$month) #contenant 12 modalitees
+
+# Etape 3: Applicons la fonction l'algorithme Boruta pour évaluer l'importance
+#des variables indépendantes par rapport à la variable cible sur plusieurs 
+#iteration pour stabiliser les resultats .
+set.seed(123)
+num_iterations <- 10  # Nombre d'itérations souhaité
+for (i in 1:num_iterations) {
+boruta_obj <- Boruta(y ~ ., data = data, maxRuns=100)
+}
+
+# Etape 4: La performance de la selection 
+boruta_result <- TentativeRoughFix(boruta_obj)
+boruta_result
+
+# Etape 5: Les variables les plus significatives selectionnees 
+selected_features <- getSelectedAttributes(boruta_result)
+selected_features
+
+
+
+################## EXPLICATION SUR L'ALGORITHME #######################
+#La fonction "Boruta" est une méthode de sélection de variables qui utilise
+#l'algorithme Boruta pour évaluer l'importance des variables indépendantes 
+#par rapport à une variable cible (variable dépendante) 
+
+## Etape 1:
+#Tout d'abord il commence a creer des copies aléatoires appelées 
+#"ombres" des variables indépendantes, 
+# par example la variable "age" sera cree "age_copie" (de meme pour les autres)
+
+# Etape 2:
+# On melage les valeurs des ombres d'une maniere aleatoire, dans ce cas
+# les valeurs des ombres ne sont pas dans le meme ordre que l'initial
+# et peuvent être différentes de celles de la variable réelle
+# par example si l'age=12,34,56 
+#-->l'age_ombre=34,56,12  ou  --> l'age_ombre=51,39,55
+
+# Etape 3:
+#On compare les copie des ombre avec les valeurs reelles pou choissir 
+#les variables les plus significatives pour la prédiction de la variable cible.
+#selon en attribuant des scores d'importance aux variables
+
+
+##### CONCLUSION :
+## LES VARIABLES LES PLUS SIGNIFICATIVES POUR LA PREDICTION DU VARIABLE CIBLE
+##cas 1:  "age"       "marital"   "education" "contact"   "day"       "month"    
+##        "duration"  "campaign"  "pdays"     "previous"  "poutcome" 
+##cas 2: "age"  "marital"  "default"  "balance"  "housing"  "loan" "contact" 
+#         "day"      "month"    "duration" "campaign" "pdays"   
+#          "previous" "poutcome"
+
+###### Resultats de la performance de l'algorithme'
+## Boruta performed 199 iterations in 1.241218 mins.
+#Tentatives roughfixed over the last 199 iterations.
+# 14 attributes confirmed important: age, balance, campaign, contact,
+# day and 9 more;
+# 2 attributes confirmed unimportant: education, job;
+
+
+
+
+
+#############################################################
+###### STEP 10: Reduire la dimension des modalites et Transformer la base de 
+##                   donnee mixte en numerique
+
+
+##### ALORS APPLIQUONS LES 8 MODELES DE PREDICTION SUR ces 3 donnees :
+# data: contenant toute la base de donnee sans elimination des variables
+# data_reduced: contenant toutes les variables mais nbr modalitees reduites
+# data_numeric : contenant toutes les variables transformees en quantitatives
+
+data=read.csv("C:/Users/ebouserhal/Desktop/cv/STA211/bank.csv",
+              na.strings=c("",".","NA","?"))
+
+data_reduced=data
+
+
+## Etape 1: transformer les variables en facteurs
+# Convertir la variable cible "y" en variable quantitative
+data$y <- ifelse(data$y == "yes", 1, 0)
+data_reduced$y <- ifelse(data_reduced$y == "yes", 1, 0)
+
+data$housing <- ifelse(data$housing == "yes", 1, 0)
+data_reduced$housing <- ifelse(data_reduced$housing == "yes", 1, 0)
+
+data$loan <- ifelse(data$loan == "yes", 1, 0)
+data_reduced$loan <- ifelse(data_reduced$loan == "yes", 1, 0)
+
+data$default<- ifelse(data$default== "yes", 1, 0)
+data_reduced$default<- ifelse(data_reduced$default== "yes", 1, 0)
+
+# Convert qualitative variables to factors
+####--> pour la base de donnee initiale "data"
+data$housing <- as.factor(data$housing)
+data$default <- as.factor(data$default)
+data$job <- as.factor(data$job)
+data$poutcome <- as.factor(data$poutcome)
+data$loan <- as.factor(data$loan)
+data$education <- as.factor(data$education)
+data$marital <- as.factor(data$marital)
+data$contact <- as.factor(data$contact)
+data$month <- as.factor(data$month)
+data$y <- as.factor(data$y)
+
+
+# Convert qualitative variables to factors
+####--> pour la base de donnee initiale "data_reduced"
+data_reduced$housing <- as.factor(data_reduced$housing)
+data_reduced$default <- as.factor(data_reduced$default)
+data_reduced$job <- as.factor(data_reduced$job) 
+data_reduced$poutcome <- as.factor(data_reduced$poutcome)
+data_reduced$loan <- as.factor(data_reduced$loan)
+data_reduced$education <- as.factor(data_reduced$education)
+data_reduced$marital <- as.factor(data_reduced$marital)
+data_reduced$contact <- as.factor(data_reduced$contact)
+data_reduced$month <- as.factor(data_reduced$month)
+data_reduced$y <- as.factor(data_reduced$y)
+                    
+
+## Etape 2: reduire le nombre de modalitees dans chaque variables quali
+#### Avant de transformer la base de donnee en base numerique il faut remplacer
+## quelques modalitees pour reduire le nombre de modalitees dans les var quali
+
+## variable job: 2 categories
+#-->"admin.", "management", "technician" are "high quality"
+#-->"blue-collar","entrepreneur","housemaid","retired","self-employed",
+# "services", "student", "unemployed","unknown" are "average quality"
+library(dplyr)
+data_reduced <- data_reduced %>%
+  mutate(job = recode(job,
+                      "admin." = "high quality",
+                      "management" = "high quality",
+                      "technician" = "high quality",
+                      .default = "average quality"))
+
+
+## variable Marital: 2 categories
+#--> Catégorie "Married" : "married"
+#--> Catégorie "Non Married" : "divorced", "single"
+library(dplyr)
+data_reduced <- data_reduced %>%
+  mutate(marital = recode(marital,
+                      "divorced" = "non married",
+                      "single" = "non married",
+                      .default = "married"))
+
+## variable Education: 2 categories
+#--> "primary", "secondary" are "Lower education"
+#--> "tertiary", "unknown" are "Higher education"
+library(dplyr)
+data_reduced <- data_reduced %>%
+  mutate(education = recode(education,
+                          "primary" = "lower education",
+                          "secondary" = "lower education",
+                          .default = "higher education"))
+
+
+## variable contact: 2 categories
+#--> Catégorie "Known Contact" : "cellular", "telephone"
+#--> Catégorie "Unknown Contact" : "unknown"
+library(dplyr)
+data_reduced <- data_reduced %>%
+  mutate(contact = recode(contact,
+                          "cellular" = "known",
+                          "telephone" = "known",
+                          .default = "unknown"))
+
+
+## variable month: 2 categories
+#--> Catégorie "Summer Months" : "jun", "jul", "aug"
+#--> Catégorie "Non-Summer Months" : toutes les autres modalités
+library(dplyr)
+data_reduced <- data_reduced %>%
+  mutate(month = recode(month,
+                          "jun" = "summer-months",
+                          "jul" = "summer-months",
+                          "aug" = "summer-months",
+                          .default = "non-summer"))
+
+
+## variable poutcome: 2 categories
+#--> Catégorie "Unsuccessful Outcome" : "failure", "unknown"
+#--> Catégorie "Successful Outcome" : "other", "success"
+library(dplyr)
+data_reduced <- data_reduced %>%
+  mutate(poutcome = recode(poutcome,
+                           "failure" = "Unsuccessful Outcome",
+                           "unknown" = "Unsuccessful Outcome",
+                          .default = "Successful Outcome"))
+str(data)
+str(data_reduced)
+
+# Etape 3: Transformer les var Qualitative en Quantitative
+library(dplyr)
+data_numeric=data
+# Replace character levels with numeric values 
+#### for variable "job"
+# "admin."=1, "management"=2, "technician"=3, "blue-collar"=4, "entrepreneur"=5,
+# "housemaid"=6, "retired"=7, "self-employed"=8, "services"=9, "student"=10,
+# "unemployed"=11, "unknown"=12 
+data_numeric <- data_numeric %>% 
+  mutate(job = recode(job,"admin."=1, "management"=2, "technician"=3, "blue-collar"=4, "entrepreneur"=5,
+                      "housemaid"=6, "retired"=7, "self-employed"=8, "services"=9, "student"=10,
+                      "unemployed"=11, "unknown"=12 ))
+str(data_numeric$job)
+
+#### for variable "marital"
+#  "married"=1, "divorced"=2, "single"=3
+data_numeric <- data_numeric %>% 
+  mutate(marital = recode(marital,"married"=1, "divorced"=2, "single"=3 ))
+str(data_numeric$marital)
+
+#### for variable "education"
+# "primary"=1, "secondary"=2, "tertiary"=3, "unknown"=4 
+data_numeric <- data_numeric %>% 
+  mutate(education = recode(education,"primary"=1, "secondary"=2, "tertiary"=3,
+                            "unknown"=4  ))
+str(data_numeric$education)
+
+#### for variable "contact"
+#  "Known Contact"=1, "cellular"=2, "telephone"=3, "Unknown Contact"=4 
+data_numeric <- data_numeric %>% 
+  mutate(contact = recode(contact, "cellular"=2, "telephone"=2, "unknown"=3 ))
+
+str(data_numeric$contact)
+summary(data$contact)
+
+
+#### for variable "month"
+# "apr"=4, "aug"=8, "dec"=12, "feb"=2, "jan"=1, "jul"=7, "jun"=6, "mar"=3,
+# "may"=5, "nov"=11, "oct"=10, "sep'=9 
+data_numeric <- data_numeric %>% 
+mutate(month = recode(month,"apr"=4, "aug"=8, "dec"=12, "feb"=2,
+   "jan"=1, "jul"=7, "jun"=6, "mar"=3,"may"=5, "nov"=11, "oct"=10, "sep"=9))
+
+str(data_numeric$month)
+summary(data$month)
+
+#### for variable "poutcome"
+#  "failure"=1, "unknown"=2, "other"=3, "success"=4
+data_numeric <- data_numeric %>% 
+mutate(poutcome = recode(poutcome,"failure"=1, "unknown"=2,
+                          "other"=3, "success"=4))
+
+str(data_numeric$poutcome)
+summary(data$poutcome)
+
+
+############################################################################### 
+############ STEP 11: DATA PARTITION ##########################
+# decoupage de la base de donnee en apprentissage (70%) et test (30%)
+#AVANT le decoupage on a deja transforme la variables cible en facteur
+# On va faire la partition sur 3 base de donnees
+####--> data= base initiale mixtes
+####--> data_reduced= base de modalitees reduites
+####--> data_numeric= base numerique not scaled
+####--> data_numeric_scaled= base numerique and scaled 
+#        we'll scale (train&test) seperately
+
+
+
+### Etape 1: creer la partition
+library(caret)
+set.seed(134)
+parts = createDataPartition(data$y, p =0.7, list = F)
+parts_numeric = createDataPartition(data_numeric$y, p =0.7, list = F)
+parts_reduced= createDataPartition(data_reduced$y, p =0.7, list = F)
+
+### Etape 2:creer la partie apprentissage
+train = data[parts, ]
+train_numeric = data_numeric[parts_numeric, ]
+train_reduced = data_reduced[parts_reduced, ]
+
+
+# Select numeric variables for scaling
+train_numeric$y=as.numeric(train_numeric$y)
+train_numeric_variables <- sapply(train_numeric[,-which(names(train_numeric) == "y")], is.numeric)
+# Scale the selected numeric variables
+train_numeric_scaled <- as.data.frame(scale(train_numeric[, train_numeric_variables]))
+# Add the target variable 'y' back to the scaled data frame
+train_numeric_scaled$y <- train_numeric$y
+
+### Etape 3: creeer la parite test
+test = data[-parts, ]
+test_numeric = data_numeric[-parts_numeric, ]
+test_reduced = data_reduced[-parts_reduced, ]
+
+
+# Select numeric variables for scaling
+test_numeric$y=as.numeric(test_numeric$y)
+test_numeric_variables <- sapply(test_numeric[,-which(names(test_numeric) == "y")], is.numeric)
+# Scale the selected numeric variables
+test_numeric_scaled <- as.data.frame(scale(test_numeric[, test_numeric_variables]))
+# Add the target variable 'y' back to the scaled data frame
+test_numeric_scaled$y <- test_numeric$y
+
+
+###la dimension des deux parties: Apprentissage et Test
+nrow(train) ; nrow(test)
+nrow(train_numeric) ; nrow(test_numeric)
+nrow(train_reduced) ; nrow(test_reduced)
+nrow(train_numeric_scaled) ; nrow(test_numeric_scaled)
+
+
+
+##### AVANT DE D'APPLIQUER LES MODELES SUR LA BASE DE DONNEE:
+# PUISQUE LA MAJORITES DES OBSERVATION NE SINSCRIENT PAS UN DEPOT--> Y=0
+# C-A-D C'EST UNE BASE DE DONNEE DESEQUILIBREE CEQUI AFFECTE NEGATIVEMENT SUR LA 
+# PERFORMANCE DES MODELES, ALORS IL FAUT L'EQUILIBRER EN UTILISANT "ovun.sample"
+
+## EXPLICATION SUR LA FONCTION UTILISEE:
+#La fonction ovun.sample  est utilisée pour effectuer le suréchantillonnage de
+#la classe minoritaire dans un ensemble de données déséquilibré.
+##--> methode=both ;  "over", "under", "both" ou "both.extra" 
+##--> N= 2000, la classe minoritaire sera suréchantillonnée pour avoir 2000 observations.
+##--> seed= 134 pour obtenir les meme resultats a chaque execution
+
+# telecharger les bibliothèques nécessaires
+set.seed(134)
+library(caret)
+library(ROSE)
+# install.packages("ROSE")
+
+# Suréchantillonnage de la partie train
+balanced_train <- ovun.sample(y ~ ., data = train, method ="both", N = 28000, seed = 134)
+balanced_train_numeric <- ovun.sample(y ~ ., data = train_numeric, method = "both", N = 28000, seed = 134)
+balanced_train_reduced <- ovun.sample(y ~ ., data = train_reduced, method = "both", N = 28000, seed = 134)
+balanced_train_numeric_scaled <- ovun.sample(y ~ ., data = train_numeric_scaled, method = "both", N = 28000, seed = 134)
+
+# Extraire les données suréchantillonnées
+balanced_train=balanced_train$data
+balanced_train_numeric=balanced_train_numeric$data
+balanced_train_reduced=balanced_train_reduced$data
+balanced_train_numeric_scaled=balanced_train_numeric_scaled$data
+
+
+# Suréchantillonnage de la partie test
+balanced_test <- ovun.sample(y ~ ., data = test, method ="both", N = 28000, seed = 134)
+balanced_test_numeric <- ovun.sample(y ~ ., data = test_numeric, method = "both", N = 28000, seed = 134)
+balanced_test_reduced <- ovun.sample(y ~ ., data = test_reduced, method = "both", N = 28000, seed = 134)
+balanced_test_numeric_scaled <- ovun.sample(y ~ ., data = test_numeric_scaled, method = "both", N = 28000, seed = 134)
+
+# Extraire les données suréchantillonnées
+balanced_test=balanced_test$data
+balanced_test_numeric=balanced_test_numeric$data
+balanced_test_reduced=balanced_test_reduced$data
+balanced_test_numeric_scaled=balanced_test_numeric_scaled$data
+
+############## !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! ##########################
+############################################################################### 
+############ STEP 12: APPLICATION DES 8 MODELES ##########################
+##############################################################################
+
+
+
+############################################################################
+####### MODEL 1: ARBRE DE DECISION SELON MEILLEUR CP #######
+############### SANS ELAGAGE --> CP=0
+# cp=0: parametre de complexite nulle donc arbre complet
+# minsplit=5: nombre minimal d'ind dans un noeud.
+# Model rpart
+set.seed(134)
+library(rpart)
+data=as.data.frame(data)
+dendri_data <- rpart(y~., data=balanced_train, method="class", control=rpart.control(minsplit=5,cp=0))
+dendri_data_reduced <- rpart(y~., data=balanced_train_reduced, method="class", control=rpart.control(minsplit=5,cp=0))
+dendri_data_numeric <- rpart(y~., data=balanced_train_numeric , method="class", control=rpart.control(minsplit=5,cp=0))
+dendri_data_numeric_scaled <- rpart(y~., data=balanced_train_numeric_scaled, method="class", control=rpart.control(minsplit=5,cp=0))
+
+# PLOT CP : visualiser le changement de l'arbre quand cp change
+#on peut regarder graphiquement et choisir cp en utilisant fct "plotcp" 
+#pour voir la valeur en utilise $cptable
+par(mfrow=c(2,2))
+plotcp(dendri_data)
+plotcp(dendri_data_reduced)
+plotcp(dendri_data_numeric)
+plotcp(dendri_data_numeric_scaled)
+par(mfrow=c(1,1))
+
+#xerror: estimation de l'erreur
+#xstd: ecart type du risque
+# meilleur cp selon le min d'erreur ayant: minimum xerror + xstd
+cp.select <- function(big.tree)
+{
+  min.x <- which.min(big.tree$cptable[, 4]) 
+  for(i in  1: nrow(big.tree$cptable))
+  {
+    if(big.tree$cptable[i,4] < big.tree$cptable[min.x,4]+ big.tree$cptable[min.x, 5]) 
+      return(big.tree$cptable[i, 1])
+  }
+}
+
+# Quelle la valeure optimale de cp 
+cp.select(dendri_data) #0.0001003915
+cp.select(dendri_data_reduced) #0.0001003915
+
+
+#pour voir l'arbre de desicion ecrite on utilise la fonction "prune"
+#de ce text ecrit on peut dire que "ca" est une variable importante
+dendrp_data <- prune(dendri_data, cp = cp.select(dendri_data))
+dendrp_data_reduced <- prune(dendri_data_reduced, cp = cp.select(dendri_data_reduced))
+
+
+#pour voir les variables les plus importantes
+dendrp_data$variable.importance
+dendrp_data_reduced$variable.importance
+
+
+#Pour etudier la performance du modele Arbre de decision
+#### Methode 1: COURBE DE ROC
+# Validation par la courbe ROC et AUC
+#Courbe Roc et AUC des forets par AD:arbre de decision.
+library(pROC)
+#abel kena 7atin type=class bas hone badna nechte8l 3ala l prob
+#on a transforme la variable cible target en prob
+pdt_data=predict(dendrp_data, balanced_test,type="prob")
+pdt_data_reduced=predict(dendrp_data_reduced, balanced_test_reduced,type="prob")
+
+
+balanced_test$y=as.factor(balanced_test$y)
+balanced_test_reduced$y=as.factor(balanced_test_reduced$y)
+
+#Pour evaluer la preformance du modele Arbre de decision
+### Methode 1: Courbe de Roc
+Roc_data= roc(balanced_test$y, pdt_data[,2])
+Roc_data_reduced= roc(balanced_test_reduced$y, pdt_data_reduced[,2])
+
+
+# Tracer le graphe ROC initial avec la première courbe
+plot.roc(Roc_data, percent = TRUE, lwd = 4, col = "blue", print.auc = FALSE)
+text(0.3, 0.4, paste("AUC =", round(auc(Roc_data), 2)), col = "blue", cex = 1.2)
+
+# Ajouter les courbes ROC restantes
+plot.roc(Roc_data_reduced, percent = TRUE, lwd = 4, col = "green", print.auc = FALSE, add = TRUE)
+text(0.3, 0.3, paste("AUC =", round(auc(Roc_data_reduced), 2)), col = "green", cex = 1.2)
+
+
+# Ajouter une légende
+legend("bottomright", legend = c("DT model sur data", "DT model sur data_reduced"),
+       col = c("blue", "green"), lwd = 2, cex = 0.6, xpd = TRUE, horiz = TRUE)
+
+
+#Pour etudier la performance du modele Arbre de decision
+#### Methode 2: Matrice de Confusion
+## Etape 1: il faut transformer la prediction pdt_ et pdt-data_reduced en prob
+#            ensuite en facteurs pour trouver la matrice de confusion
+library(caret)
+
+
+# Convert predicted probabilities to factor levels
+predicted_levels <- ifelse(pdt_data[, 2] > 0.5, levels(balanced_test$y)[2], levels(balanced_test$y)[1])
+
+# Create the confusion matrix
+confusion_matrix_DT_data <- confusionMatrix(data = as.factor(predicted_levels),
+                                            reference = balanced_test$y,
+                                            positive = levels(balanced_test$y)[2])
+
+
+
+predicted_levels_reduced <- ifelse(pdt_data_reduced[, 2] > 0.5, levels(balanced_test_reduced$y)[2], levels(test_reduced$y)[1])
+confusion_matrix_DT_data_reduced <- confusionMatrix(data = as.factor(predicted_levels_reduced),
+                                                 reference = balanced_test_reduced$y, positive = "1")
+
+
+# Print confusion matrices
+confusion_matrix_DT_data
+
+#Reference
+#Prediction    no   yes
+#no  12845  9290
+#yes  1165  4700
+
+#Accuracy : 0.6266          
+#95% CI : (0.6209, 0.6323)
+#No Information Rate : 0.5004          
+#P-Value [Acc > NIR] : < 2.2e-16       
+
+#Kappa : 0.2529          
+
+#Mcnemar's Test P-Value : < 2.2e-16       
+                                          
+#            Sensitivity : 0.3360          
+#            Specificity : 0.9168          
+#         Pos Pred Value : 0.8014          
+#        Neg Pred Value : 0.5803          
+#             Prevalence : 0.4996          
+#         Detection Rate : 0.1679          
+#   Detection Prevalence : 0.2095          
+#      Balanced Accuracy : 0.6264          
+                                          
+#       'Positive' Class : yes             
+ 
+
+# Print confusion matrices
+confusion_matrix_DT_data_reduced
+
+#          Reference
+#Prediction     0     1
+#         0 12870  9231
+#         1  1140  4759
+#                                          
+#               Accuracy : 0.6296          
+#                 95% CI : (0.6239, 0.6353)
+#    No Information Rate : 0.5004          
+#    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+#                  Kappa : 0.2589          
+                                          
+# Mcnemar's Test P-Value : < 2.2e-16       
+
+#Sensitivity : 0.3402          
+#Specificity : 0.9186          
+#Pos Pred Value : 0.8067          
+#Neg Pred Value : 0.5823          
+#Prevalence : 0.4996          
+#Detection Rate : 0.1700          
+#Detection Prevalence : 0.2107          
+#Balanced Accuracy : 0.6294          
+
+#'Positive' Class : 1          
+
+
+
+
+
+
+############################################################################
+###################### MODEL 2: RANDOME FOREST #######################
+####  USING "CARET" LIBRARY --> boite noir ################
+
+#on prend toutes les variables sauf la variable cible
+set.seed(134)
+library("caret")
+
+balanced_train$y=as.factor(balanced_train$y)
+balanced_train_reduced$y=as.factor(balanced_train_reduced$y)
+balanced_train_numeric$y=as.factor(balanced_train_numeric$y)
+
+
+ctrl <- trainControl(method = "cv", number = 5, verboseIter = FALSE)  
+# Modèle Random Forest 
+rf_data <- train(y ~ ., data = balanced_train, method = "rf", trControl = ctrl)
+rf_data_reduced <- train(y ~ ., data = balanced_train_reduced, method = "rf", trControl = ctrl)
+
+
+plot(rf_data)
+plot(rf_data_reduced)
+
+# meilleur parametre mtry
+rf_data$bestTune   ## mtry=22
+rf_data_reduced$bestTune  ##  mtry=9
+
+# modele optimal : nous donne l'erreur "OOB" et "matrice de confusion"!
+print(rf_data$finalModel)
+#Call:
+ # randomForest(x = x, y = y, mtry = param$mtry) 
+#Type of random forest: classification
+#Number of trees: 500
+#No. of variables tried at each split: 22
+
+#OOB estimate of  error rate: 0.03%
+#Confusion matrix:
+#   0       1     class.error
+#0 10485    7     0.000667175
+#1   0    10454   0.000000000
+
+print(rf_data_reduced$finalModel)
+#Call:
+#randomForest(x = x, y = y, mtry = param$mtry) 
+#Type of random forest: classification
+#Number of trees: 500
+#No. of variables tried at each split: 9
+
+#OOB estimate of  error rate: 0.05%
+#Confusion matrix:
+#  0        1     class.error
+#0 10481    11   0.001048418
+#1   0   10454   0.000000000
+
+
+
+# variables importance du modele final
+varImp(rf_data$finalModel)
+varImp(rf_data_reduced$finalModel)
+
+
+#pour visualiser les variables importantes 
+plot(varImp(rf_data))
+plot(varImp(rf_data_reduced))
+
+
+#pour etudier la performance du modele Random Forest
+##Methode 2: COURBE DE ROC 
+# Validation par la courbe ROC et AUC
+library(pROC)
+
+#on a transforme la variable cible target en prob
+prediction_RF_data=predict(rf_data, balanced_test,type="prob")
+prediction_RF_data_reduced=predict(rf_data_reduced, balanced_test_reduced,type="prob")
+
+
+# Convert response variable to a binary factor with two levels
+balanced_test$y <- as.factor(balanced_test$y)
+levels(balanced_test$y) <- c("0", "1")
+
+# Calculate the ROC curve for the predictions
+Roc_data <- roc(as.numeric(balanced_test$y) - 1, as.numeric(prediction_RF_data[, 2]))
+Roc_data_reduced <- roc(as.numeric(balanced_test_reduced$y) - 1, as.numeric(prediction_RF_data_reduced[, 2]))
+
+# Create a new plot
+plot.new()
+
+# Plot the initial ROC curve with the first curve
+plot.roc(Roc_data, percent = TRUE, lwd = 4, col = "blue", print.auc = FALSE)
+text(0.3, 0.4, paste("AUC =", round(auc(Roc_data), 2)), col = "blue", cex = 1.2)
+
+# Add the remaining ROC curves
+plot.roc(Roc_data_reduced, percent = TRUE, lwd = 4, col = "green", print.auc = FALSE, add = TRUE)
+text(0.3, 0.3, paste("AUC =", round(auc(Roc_data_reduced), 2)), col = "green", cex = 1.2)
+
+# Add a legend
+legend("bottomright", legend = c("RF model on data", "RF model on data_reduced"),
+       col = c("blue", "green"), lwd = 2, cex = 0.6, xpd = TRUE, horiz = TRUE)
+
+
+#Pour etudier la performance du modele Arbre de decision
+#### Methode 2: Matrice de Confusion
+## Etape 1: il faut transformer la prediction pdt_ et pdt-data_reduced en prob
+#            ensuite en facteurs pour trouver la matrice de confusion
+library(caret)
+
+# Convert predicted probabilities to factor levels
+predicted_levels <- ifelse(prediction_RF_data[, 2] > 0.5, levels(balanced_test$y)[2], levels(balanced_test$y)[1])
+confusion_matrix_RF_data <- confusionMatrix(data = as.factor(predicted_levels),
+                                         reference = balanced_test$y, positive = "1")
+
+predicted_levels_reduced <- ifelse(prediction_RF_data_reduced[, 2] > 0.5, levels(balanced_test_reduced$y)[2], levels(balanced_test_reduced$y)[1])
+confusion_matrix_RF_data_reduced <- confusionMatrix(data = as.factor(predicted_levels_reduced),
+                                                 reference = balanced_test_reduced$y, positive = "1")
+
+
+# Print confusion matrices
+confusion_matrix_RF_data
+
+#Reference
+#Prediction     0     1
+#0 13573  9925
+#1   437  4065
+
+#Accuracy : 0.6299          
+#95% CI : (0.6242, 0.6356)
+#No Information Rate : 0.5004          
+#P-Value [Acc > NIR] : < 2.2e-16       
+
+#Kappa : 0.2595          
+
+#Mcnemar's Test P-Value : < 2.2e-16       
+                                          
+#            Sensitivity : 0.2906          
+#            Specificity : 0.9688          
+#         Pos Pred Value : 0.9029          
+#         Neg Pred Value : 0.5776          
+#             Prevalence : 0.4996          
+#         Detection Rate : 0.1452          
+#   Detection Prevalence : 0.1608          
+#      Balanced Accuracy : 0.6297          
+                                          
+#       'Positive' Class : 1               
+
+confusion_matrix_RF_data_reduced
+                                          
+#          Reference
+#Prediction     0     1
+#         0 13655  9662
+#        1   355  4328
+#                                          
+#               Accuracy : 0.6422          
+#                 95% CI : (0.6366, 0.6479)
+#    No Information Rate : 0.5004          
+#    P-Value [Acc > NIR] : < 2.2e-16       
+#                                          
+#                  Kappa : 0.2842          
+#                                          
+# Mcnemar's Test P-Value : < 2.2e-16       
+#
+#    Sensitivity : 0.3094          
+#    Specificity : 0.9747          
+#    Pos Pred Value : 0.9242          
+#    Neg Pred Value : 0.5856          
+#    Prevalence : 0.4996          
+#    Detection Rate : 0.1546          
+#    Detection Prevalence : 0.1673          
+#     Balanced Accuracy : 0.6420          
+
+#'Positive' Class : 1  
+
+
+
+
+
+
+
+
+###############################################################################
+############# MODELE 3: LOGISTIC REGRESSION ##########################
+### on va seulement appliquer ce modele sur 3 base de donnee:
+## --> data initial ; --> data reduced ; --> data numeric ##
+## on ne peux pas l'applique sur la base de donnee data_numeric_scaled
+
+# Charger la bibliothèque pour la régression logistique
+library("stats")
+
+# Créer un modèle de régression logistique
+model_data <- glm(y ~., data = balanced_train, family = binomial)
+model_data_reduced <- glm(y ~., data = balanced_train_reduced, family = binomial)
+
+
+# Faire des prédictions sur l'ensemble de test
+predictions_LR_data <- predict(model_data, newdata = balanced_test, type = "response")
+predictions_LR_data_reduced <- predict(model_data_reduced, newdata = balanced_test_reduced, type = "response")
+
+
+####################################################
+##Pour evaluer la performance du modele regression logistique
+##### Methode 1: COURBE DE ROC :
+# Charger la bibliothèque pour les courbes ROC
+library(pROC)
+
+# Trouver les coordonnees de chaque courbe
+Roc_data <- roc(balanced_test$y, predictions_LR_data)
+Roc_data_reduced <- roc(balanced_test_reduced$y, predictions_LR_data_reduced)
+
+# Tracer le graphe ROC initial avec la première courbe
+plot.roc(Roc_data, percent = TRUE, lwd = 4, col = "blue", print.auc = FALSE)
+text(0.3, 0.4, paste("AUC =", round(auc(Roc_data), 2)), col = "blue", cex = 1.2)
+
+# Ajouter les courbes ROC restantes
+plot.roc(Roc_data_reduced, percent = TRUE, lwd = 4, col = "green", print.auc = FALSE, add = TRUE)
+text(0.3, 0.3, paste("AUC =", round(auc(Roc_data_reduced), 2)), col = "green", cex = 1.2)
+
+
+
+# Ajouter une légende
+legend("bottomright", legend = c("data", "data_reduced"),
+       col = c("blue","green"), lwd = 2, cex = 0.6, xpd = TRUE, horiz = TRUE)
+
+
+
+
+###########################################################
+#Pour evaluer le modele regression Logistique
+### Methode 2: Matrice de Confusion
+
+# Définir un seuil pour convertir les probabilités en classes prédites (0 ou 1)
+threshold <- 0.5
+predicted_classes_data <- ifelse(predictions_LR_data > threshold, 1, 0)
+predicted_classes_data_reduced <- ifelse(predictions_LR_data_reduced > threshold, 1, 0)
+
+
+# Convertir les prédictions en facteur avec les mêmes niveaux que les vraies valeurs
+predicted_classes_data <- factor(predicted_classes_data, levels = levels(balanced_test$y))
+predicted_classes_data_reduced <- factor(predicted_classes_data_reduced, levels = levels(balanced_test_reduced$y))
+
+
+# Évaluer les performances du modèle en utilisant la matrice de confusion
+library("caret")
+Matrice_LR_data =confusionMatrix(data=predicted_classes_data, reference = balanced_test$y)
+
+Matrice_LR_data_reduced=confusionMatrix(data=predicted_classes_data_reduced, 
+                                        reference = balanced_test_reduced$y, positive = "1")
+
+
+
+# Print confusion matrix
+Matrice_LR_data
+
+#Reference
+#Prediction     0     1
+#0 11711  2560
+#1  2299 11430
+
+#Accuracy : 0.8265         
+#95% CI : (0.822, 0.8309)
+#No Information Rate : 0.5004         
+#P-Value [Acc > NIR] : < 2.2e-16      
+
+#Kappa : 0.6529         
+
+#Mcnemar's Test P-Value : 0.0001915      
+                                         
+#            Sensitivity : 0.8359         
+#            Specificity : 0.8170         
+#         Pos Pred Value : 0.8206         
+#         Neg Pred Value : 0.8325         
+#             Prevalence : 0.5004         
+#         Detection Rate : 0.4183         
+#   Detection Prevalence : 0.5097         
+#      Balanced Accuracy : 0.8265         
+#                                         
+#       'Positive' Class : 0              
+
+                                         
+# Print confusion matrix
+Matrice_LR_data_reduced
+
+
+#          Reference
+# Prediction     0     1
+#         0 11653  4172
+#         1  2357  9818
+#                                          
+#               Accuracy : 0.7668          
+#                 95% CI : (0.7618, 0.7718)
+#    No Information Rate : 0.5004          
+#    P-Value [Acc > NIR] : < 2.2e-16       
+#                                          
+#                  Kappa : 0.5336          
+#                                          
+#  Mcnemar's Test P-Value : < 2.2e-16       
+
+#   Sensitivity : 0.7018          
+#   Specificity : 0.8318          
+#   Pos Pred Value : 0.8064          
+#   Neg Pred Value : 0.7364          
+#   Prevalence : 0.4996          
+#   Detection Rate : 0.3506          
+#   Detection Prevalence : 0.4348          
+#   Balanced Accuracy : 0.7668          
+
+#'Positive' Class : 1        
+
+
+
+
+
+
+###############################################################################
+############## MODEL 4: NAIVE BAYES ############################
+## en utilisant la library(e1071) la fonction "naiveBayes"
+library(e1071)
+set.seed(134)
+
+# Pour appliquer le Naive Bayes on va travailler par une base de donnee contenant
+#seulement les variables explicatives (il faut eliminer la variable cible)
+
+
+# Supprimez la colonne de la variable cible des données d'entraînement
+train_features <- balanced_train[, -ncol(balanced_train)]
+train_reduced_features <- balanced_train_reduced[, -ncol(balanced_train_reduced)]
+
+test_features <- balanced_test[, -ncol(balanced_test)]
+test_reduced_features <- balanced_test_reduced[, -ncol(balanced_test_reduced)]
+
+
+# Convertissez les étiquettes en facteur
+train_labels <- as.factor(balanced_train$y)
+test_labels <- as.factor(balanced_test$y)
+
+train_reduced_labels <- as.factor(balanced_train_reduced$y)
+test_reduced_labels <- as.factor(balanced_test_reduced$y)
+
+# Entraînement du modèle Naïve Bayes:
+##--> train_features et train_reduced_features continnent seulement les var explicative
+##--> train_labels et train_reduced_labels contiennent seulement la variable cible
+NB_model <- naiveBayes(train_features, train_labels)
+NB_model_reduced <- naiveBayes(train_reduced_features, train_reduced_labels)
+
+# Faire des prédictions sur l'ensemble de test
+predictions_NB_data <- predict(NB_model, newdata =test_features, type="raw")[,2]
+predictions_NB_data_reduced<- predict(NB_model_reduced, newdata =test_reduced_features, type="raw")[,2]
+
+
+####################################################
+##Pour evaluer la performance du modele Naive Bayes
+##### Methode 1: COURBE DE ROC :
+# Charger la bibliothèque pour les courbes ROC
+library(pROC)
+
+# Trouver les coordonnees de chaque courbe
+Roc_data <- roc(balanced_test$y, predictions_NB_data)
+Roc_data_reduced <- roc(balanced_test_reduced$y, predictions_NB_data_reduced)
+
+# Tracer le graphe ROC initial avec la première courbe
+plot.roc(Roc_data, percent = TRUE, lwd = 4, col = "blue", print.auc = FALSE)
+text(0.3, 0.4, paste("AUC =", round(auc(Roc_data), 2)), col = "blue", cex = 1.2)
+
+# Ajouter les courbes ROC restantes
+plot.roc(Roc_data_reduced, percent = TRUE, lwd = 4, col = "green", print.auc = FALSE, add = TRUE)
+text(0.3, 0.3, paste("AUC =", round(auc(Roc_data_reduced), 2)), col = "green", cex = 1.2)
+
+# Ajouter une légende
+legend("bottomright", legend = c("data", "data_reduced"),
+       col = c("blue","green"), lwd = 2, cex = 0.6, xpd = TRUE, horiz = TRUE)
+
+
+
+
+###########################################################
+#Pour evaluer le modele Naive Bayes
+### Methode 2: Matrice de Confusion
+
+# Définir un seuil pour convertir les probabilités en classes prédites (0 ou 1)
+threshold <- 0.5
+predicted_classes_data <- ifelse(predictions_NB_data > threshold, 1, 0)
+predicted_classes_data_reduced <- ifelse(predictions_NB_data_reduced > threshold, 1, 0)
+
+
+# Convertir les prédictions en facteur avec les mêmes niveaux que les vraies valeurs
+predicted_classes_data <- factor(predicted_classes_data, levels = levels(balanced_test$y))
+predicted_classes_data_reduced <- factor(predicted_classes_data_reduced, levels = levels(balanced_test_reduced$y))
+
+
+# Évaluer les performances du modèle en utilisant la matrice de confusion
+library("caret")
+
+Matrice_NB_data =confusionMatrix(data=predicted_classes_data, reference = balanced_test$y)
+
+Matrice_NB_data_reduced=confusionMatrix(data=predicted_classes_data_reduced, 
+                                     reference = balanced_test_reduced$y, positive = "1")
+
+
+
+# Print confusion matrix
+Matrice_NB_data
+
+#Reference
+#Prediction     0     1
+#0 10779  2843
+#1  3231 11147
+
+#Accuracy : 0.7831          
+#95% CI : (0.7782, 0.7879)
+#No Information Rate : 0.5004          
+#P-Value [Acc > NIR] : < 2.2e-16       
+
+#Kappa : 0.5662          
+
+#Mcnemar's Test P-Value : 6.848e-07       
+                                          
+#            Sensitivity : 0.7694          
+#            Specificity : 0.7968          
+#         Pos Pred Value : 0.7913          
+#         Neg Pred Value : 0.7753          
+#             Prevalence : 0.5004          
+#         Detection Rate : 0.3850          
+#   Detection Prevalence : 0.4865          
+#      Balanced Accuracy : 0.7831          
+                                          
+#       'Positive' Class : 0               
+  
+  
+  
+# Print confusion matrix
+Matrice_NB_data_reduced
+
+
+#          Reference
+# Prediction     0     1
+#         0 11556  4739
+#         1  2454  9251
+#                                          
+#               Accuracy : 0.7431          
+#                 95% CI : (0.7379, 0.7482)
+#    No Information Rate : 0.5004          
+#    P-Value [Acc > NIR] : < 2.2e-16       
+#                                          
+#                  Kappa : 0.4862          
+#                                          
+# Mcnemar's Test P-Value : < 2.2e-16       
+#
+#    Sensitivity : 0.6613          
+#    Specificity : 0.8248          
+#    Pos Pred Value : 0.7903          
+#    Neg Pred Value : 0.7092          
+#    Prevalence : 0.4996          
+#    Detection Rate : 0.3304          
+#    Detection Prevalence : 0.4180          
+#    Balanced Accuracy : 0.7430          
+
+# 'Positive' Class : 1  
+
+
+
+
+
+
+
+#########################################################################
+########### MODEL 5: ONE-R-ALGORITHM #######################
+# Charger le package OneR
+## install.packages("OneR")
+library(OneR)
+
+# convertir en data frame et verifier qu'elle ne contienne pas NA
+balanced_train=as.data.frame(balanced_train)
+balanced_train=na.omit(balanced_train)
+
+balanced_train_reduced=as.data.frame(balanced_train_reduced)
+balanced_train_reduced=na.omit(balanced_train_reduced)
+
+
+#Convertir la variable cible en facteur
+balanced_train$y <- as.factor(balanced_train$y)
+balanced_train_reduced$y <- as.factor(balanced_train_reduced$y)
+
+
+# Créer un objet de type "OneR" avec les données d'entraînement
+one_r_model <- OneR(balanced_train, verbose = TRUE)
+one_r_model_reduced <- OneR(balanced_train_reduced, verbose = TRUE)
+
+# Afficher le modèle
+print(one_r_model)
+print(one_r_model_reduced)
+
+
+# Faire des prédictions sur les données de test
+predictions_oneR_data <- predict(one_r_model, balanced_test)
+predictions_oneR_data_reduced <- predict(one_r_model, balanced_test_reduced)
+
+
+
+#pour etudier la performance du modele one-R-algorithm
+##Methode 2: COURBE DE ROC 
+# Validation par la courbe ROC et AUC
+library(pROC)
+
+#on a transforme la variable cible target en prob
+prediction_oneR_data=predict(one_r_model , balanced_test,type="prob")
+prediction_oneR_data_reduced=predict(one_r_model_reduced, balanced_test_reduced,type="prob")
+
+
+# Calcul de la courbe ROC pour les prédictions 
+Roc_data <- roc(as.numeric(balanced_test$y) - 1, prediction_oneR_data[, 2])
+Roc_data_reduced <- roc(as.numeric(balanced_test_reduced$y) - 1, prediction_oneR_data_reduced[, 2])
+
+
+# Tracer le graphe ROC initial avec la première courbe
+plot.roc(Roc_data, percent = TRUE, lwd = 4, col = "blue", print.auc = FALSE)
+text(0.3, 0.5, paste("AUC =", round(auc(Roc_data), 2)), col = "blue", cex = 1.2)
+
+# Ajouter les courbes ROC restantes
+plot.roc(Roc_data_reduced, percent = TRUE, lwd = 4, col = "green", print.auc = FALSE, add = TRUE)
+text(0.3, 0.4, paste("AUC =", round(auc(Roc_data_reduced), 2)), col = "green", cex = 1.2)
+
+
+# Ajouter une légende
+legend("bottomright", legend = c("One-R model sur data", "One-R model sur data_reduced"),
+       col = c("blue", "green"), lwd = 2, cex = 0.6, xpd = TRUE, horiz = TRUE)
+
+
+
+#Pour etudier la performance du modele Arbre de decision
+#### Methode 2: Matrice de Confusion
+## Etape 1: il faut transformer la prediction pdt_ et pdt-data_reduced en prob
+#            ensuite en facteurs pour trouver la matrice de confusion
+library(caret)
+
+# Convert predicted probabilities to factor levels
+predicted_levels <- ifelse(prediction_oneR_data[, 2] > 0.5, levels(balanced_test$y)[2], levels(balanced_test$y)[1])
+confusion_matrix_oneR_data <- confusionMatrix(data = as.factor(predicted_levels),
+                                            reference = balanced_test$y, positive = "1")
+
+predicted_levels_reduced <- ifelse(prediction_oneR_data[, 2] > 0.5, levels(balanced_test_reduced$y)[2], levels(balanced_test_reduced$y)[1])
+confusion_matrix_oneR_data_reduced <- confusionMatrix(data = as.factor(predicted_levels_reduced),
+                                                    reference = balanced_test_reduced$y, positive = "1")
+
+
+# Print confusion matrices
+confusion_matrix_oneR_data
+#          Reference
+#Prediction     0     1
+#0 13012  7007
+#1   985  6983
+
+#Accuracy : 0.7144          
+#95% CI : (0.7091, 0.7197)
+#No Information Rate : 0.5001          
+#P-Value [Acc > NIR] : < 2.2e-16       
+
+#Kappa : 0.4288          
+
+#Mcnemar's Test P-Value : < 2.2e-16       
+                                          
+#            Sensitivity : 0.4991          
+#            Specificity : 0.9296          
+#         Pos Pred Value : 0.8764          
+#         Neg Pred Value : 0.6500          
+#             Prevalence : 0.4999          
+#         Detection Rate : 0.2495          
+#   Detection Prevalence : 0.2847          
+#      Balanced Accuracy : 0.7144          
+#                                          
+#      'Positive' Class : 1             
+
+
+
+# Print confusion matrices
+confusion_matrix_oneR_data_reduced
+
+#Reference
+#Prediction     0     1
+#0 13012  7007
+#1   985  6983
+
+#Accuracy : 0.7144          
+#95% CI : (0.7091, 0.7197)
+#No Information Rate : 0.5001          
+#P-Value [Acc > NIR] : < 2.2e-16       
+
+#Kappa : 0.4288          
+
+#Mcnemar's Test P-Value : < 2.2e-16       
+                                          
+#            Sensitivity : 0.4991          
+#            Specificity : 0.9296          
+#         Pos Pred Value : 0.8764          
+#         Neg Pred Value : 0.6500          
+#             Prevalence : 0.4999          
+#         Detection Rate : 0.2495          
+#   Detection Prevalence : 0.2847          
+#      Balanced Accuracy : 0.7144          
+                                          
+#       'Positive' Class : 1        
+
+
+
+
+
+
+##############################################################################
+################## MODEL 6: KNN ##########################
+# Pour appliquer le modele KNN sur une base de donnee superviser il faut:
+##1) travailler par une base d edonnee numerique (seulement des var quanti)
+##2) utiliser la fct "KNN" sur la partie Train et test sans la var cible
+##3) Etudier la performance du classification du modele KNN en comparant:
+#      les obs predites avec l'ensemble du test
+
+library(class)
+
+#Pour choisir la valeur de k (meilleure valeur de k=?)
+k <- 5
+
+# Preciser la partie train=x ou x_scaled qui ne contient pas la var cible
+# Preciser la partie test=y ou y_scaled qui ne contient pas la var cible
+## on applique le KNN sur 2 data une numeric et une numeric-scaled
+x=balanced_train_numeric[, -which(names(balanced_train_numeric) == "y")]
+y=balanced_test_numeric[, -which(names(balanced_test_numeric) == "y")]
+
+x_scaled=balanced_train_numeric_scaled[, -which(names(balanced_train_numeric_scaled) == "y")]
+y_scaled=balanced_test_numeric_scaled[, -which(names(balanced_test_numeric_scaled) == "y")]
+
+
+# Apply KNN on balanced_train_numeric
+knn_model_numeric <- knn(train = x,
+                         test = y,
+                         cl = balanced_train_numeric$y,
+                         k = 5)
+
+# Apply KNN on balanced_train_numeric_scaled
+knn_model_numeric_scaled <- knn(train = x_scaled,
+                                test = y_scaled,
+                                cl = balanced_train_numeric_scaled$y,
+                                k = 5)
+
+# Create a new plot
+plot.new()
+
+#pour etudier la performance du modele KNN
+##Methode 1: COURBE DE ROC 
+# Validation par la courbe ROC et AUC
+library(pROC)
+
+# Calculer les probabilités de prédiction pour le modèle KNN
+probabilities_numeric <- ifelse(knn_model_numeric == "positive_class_label", 1, 0)
+probabilities_numeric_scaled <- ifelse(knn_model_numeric_scaled == "positive_class_label", 1, 0)
+
+
+# Calcul de la courbe ROC pour les prédictions 
+roc_data_numeric <- roc(response = balanced_test_numeric$y, predictor = probabilities_numeric)
+roc_data_numeric_scaled <- roc(response = balanced_test_numeric_scaled$y, predictor = probabilities_numeric_scaled)
+
+
+# Tracer le graphe ROC initial avec la première courbe
+plot.roc(roc_data_numeric , percent = TRUE, lwd = 4, col = "blue", print.auc = FALSE, add = TRUE)
+text(0.3, 0.4, paste("AUC =", round(auc(roc_data_numeric ), 2)), col = "blue", cex = 1.2)
+
+# Ajouter les courbes ROC restantes
+plot.roc(roc_data_numeric_scaled , percent = TRUE, lwd = 4, col = "green", print.auc = FALSE, add = TRUE)
+text(0.3, 0.3, paste("AUC =", round(auc(roc_data_numeric_scaled )), 2), col = "green", cex = 1.2)
+
+
+# Ajouter une légende
+legend("bottomright", legend = c("KNN sur data_numeric", "KNN sur data_numeric_scaled"),
+       col = c("blue", "green"), lwd = 2, cex = 0.6, xpd = TRUE, horiz = TRUE)
+
+
+
+
+
+###########################################################
+#Pour evaluer le modele KNN
+### Methode 2: Matrice de Confusion
+
+#Avant de trouver la matrice de confusion il faut convertir la var cible en fact
+# de la partie balanced_test_numeric et balanced_test_numeric_scaled
+balanced_test_numeric$y=as.factor(balanced_test_numeric$y)
+balanced_test_numeric_scaled$y=as.factor(balanced_test_numeric_scaled$y)
+
+confusion_Matrix_KNN_numeric <- confusionMatrix(data = knn_model_numeric, reference = balanced_test_numeric$y)
+confusion_Matrix_KNN_numeric_scaled <- confusionMatrix(data = knn_model_numeric_scaled, reference = balanced_test_numeric_scaled$y)
+
+
+#Print Confusion Matrix
+confusion_Matrix_KNN_numeric
+
+#Reference
+#Prediction     1     2
+#          1 12544  8485
+#          2  1466  5505
+
+#Accuracy : 0.6446         
+#95% CI : (0.639, 0.6502)
+#No Information Rate : 0.5004         
+#P-Value [Acc > NIR] : < 2.2e-16      
+
+#Kappa : 0.289          
+
+#Mcnemar's Test P-Value : < 2.2e-16      
+                                         
+#            Sensitivity : 0.8954         
+#            Specificity : 0.3935         
+#         Pos Pred Value : 0.5965         
+#         Neg Pred Value : 0.7897         
+#             Prevalence : 0.5004         
+#         Detection Rate : 0.4480         
+#   Detection Prevalence : 0.7510         
+#      Balanced Accuracy : 0.6444         
+                                         
+#       'Positive' Class : 1              
+
+                                         
+confusion_Matrix_KNN_numeric_scaled
+
+#          Reference
+#Prediction     1     2
+#         1 12544  8485
+#         2  1466  5505
+                                         
+#               Accuracy : 0.6446         
+#                 95% CI : (0.639, 0.6502)
+#    No Information Rate : 0.5004         
+#    P-Value [Acc > NIR] : < 2.2e-16      
+                                         
+ #                 Kappa : 0.289          
+                                         
+# Mcnemar's Test P-Value : < 2.2e-16      
+
+#Sensitivity : 0.8954         
+#Specificity : 0.3935         
+#Pos Pred Value : 0.5965         
+#Neg Pred Value : 0.7897         
+#Prevalence : 0.5004         
+#Detection Rate : 0.4480         
+#Detection Prevalence : 0.7510         
+#Balanced Accuracy : 0.6444         
+
+#'Positive' Class : 1      
+
+
+
+
+
+
+############################################################################
+########## MODEL 7: ANN= Artificial Neuron Network #####################
+## ce modele est seulement applicable sur une base de donnee normalize alors
+#  sur la base de donne balanced-train_numeric_scaled
+
+# En utilisant la library "nnet"
+#chargement
+library(nnet)
+library(caret)
+set.seed(134)
+
+#apprentissage perceptron simple 
+## "skip = TRUE" (pas de couche cach?e) 
+## size = 0" (par cons?quent, pas de neurones dans la couche cach?e).
+model_ANN_numeric_scaled <- nnet(y ~ ., data =balanced_train_numeric_scaled , skip = TRUE, size = 0)
+
+## avant de faire la prediction il faut convertir en facteur la var cible
+balanced_train_numeric_scaled$y <- as.factor(balanced_train_numeric_scaled$y)
+balanced_test_numeric_scaled$y <- as.factor(balanced_test_numeric_scaled$y)
+
+# on doit verifier que la var cible dans les 2 train & test ont le mem levels
+levels(balanced_train_numeric_scaled$y)
+levels(balanced_test_numeric_scaled$y)
+
+# pour obtenir le meme level des train & test en facteur
+balanced_test_numeric_scaled$y <- factor(balanced_test_numeric_scaled$y, levels = levels(balanced_train_numeric_scaled$y))
+
+# Prédire les valeurs de la variable cible pour les données de test
+prediction_ANN_model <- predict(model_ANN_numeric_scaled, newdata = balanced_test_numeric_scaled, type = "class")
+
+# Convertir les prédictions en facteur avec les mêmes niveaux que les vraies valeurs
+prediction_ANN_model <- as.factor(prediction_ANN_model)
+levels(prediction_ANN_model) <- levels(balanced_test_numeric_scaled$y)
+
+# Créer la matrice de confusion
+confusion_ANN_matrix <- confusionMatrix(prediction_ANN_model, balanced_test_numeric_scaled$y)
+
+confusion_ANN_matrix 
+
+#Reference
+# Prediction     1     2
+#          1 11347  3299
+#          2  2663 10691
+
+#Accuracy : 0.7871          
+#95% CI : (0.7822, 0.7919)
+#No Information Rate : 0.5004          
+#P-Value [Acc > NIR] : < 2.2e-16       
+
+#Kappa : 0.5741          
+
+#Mcnemar's Test P-Value : < 2.2e-16       
+                                          
+#            Sensitivity : 0.8099          
+#            Specificity : 0.7642          
+#         Pos Pred Value : 0.7748          
+#         Neg Pred Value : 0.8006          
+#             Prevalence : 0.5004          
+#         Detection Rate : 0.4052          
+#   Detection Prevalence : 0.5231          
+#     Balanced Accuracy : 0.7871          
+                                          
+#       'Positive' Class : 1       
+
+
+
+
+##########################################
+#### Methode 2: Courbe de roc
+# pour etidier la performance du modele ANN
+# Validation par la courbe ROC et AUC
+library(pROC)
+
+
+# Convertir les niveaux du prédicteur en valeurs numériques
+## on peut pas trouver la courbe de roc si la variable est de type facteur
+prediction_ANN_numeric <- as.numeric(as.character(prediction_ANN_model))
+
+# Calculer les mesures de performance pour la courbe ROC
+roc_ANN_data <- roc(as.numeric(as.character(balanced_test_numeric_scaled$y)), prediction_ANN_numeric)
+
+
+# Tracer le graphe ROC initial avec la première courbe
+plot.roc(roc_ANN_data , percent = TRUE, lwd = 4, col = "blue", print.auc = FALSE)
+text(0.3, 0.4, paste("AUC =", round(auc(roc_ANN_data ), 2)), col = "blue", cex = 1.2)
+
+
+# Ajouter une légende
+legend("bottomright", legend = "ANN sur data_numeric_scaled",
+       col = "blue", lwd = 2, cex = 0.6, xpd = TRUE, horiz = TRUE)
+
+
+
+
+
+############################################################################
+############### MODEL 8: SVM #################################
+### En utilisant la library "e1071" pour effectuer le modele SVM en utilisant
+#la fonction svm et la fonction "Rtsne"
+
+
+##### avant d'appliquer le modele SVM il faut reduire la dimension
+# en appliquant le t-SNE :
+
+# Charger le package "Rtsne"
+library(Rtsne)
+library(e1071)
+
+# Appliquer t-SNE sur vos données: 
+#### ATTENTION : il faut eliminer la duplication alors il faut l'appliquer sur la base d edonee 
+# train_numeric_scaled et pas sur la base balanced_train_numeric_scaled car elle contient des duplication
+# a cause du surechantillonnage pour avoir une base de donnee equilibree
+
+# Etape 1: Appliquer le t-SNE
+#-->appliquer t-SNE sur toutes les colonnes à l'exception de la dernière colonne (la variable cible).
+#-->spécifié dims = 2 pour obtenir des coordonnées t-SNE en deux dimensions.
+tsne_result <- Rtsne(train_numeric_scaled[, -ncol(train_numeric_scaled)], 
+                     dims = 2, perplexity = 30, verbose = TRUE)
+# Obtenez les coordonnées t-SNE réduites
+tsne_coordinates <- tsne_result$Y
+
+
+# Etape 2: Preparation du donnee t-SNE
+#Une fois que vous avez les coordonnées t-SNE réduites, on peut les combiner 
+#avec la variable cible pour former un nouveau jeu de données 
+# Créer un nouveau jeu de données avec les coordonnées t-SNE et la variable cible
+tsne_data <- data.frame(tsne_coordinates, y = train_numeric_scaled$y)
+# Vérifier la structure des données t-SNE
+str(tsne_data)
+
+# Etape 3: Appliquer le modele SVM sur la nouvelle base de donee
+# Appliquer le modèle SVM sur les données t-SNE
+svm_model <- svm(y ~ ., tsne_data, type = "C-classification", kernel = "polynomial",
+                 degree = 2, gamma = 2, cost = 0.5, coef0 = 0)
+
+# Faire des prédictions avec le modèle SVM
+predictions_SVM_model <- predict(svm_model, tsne_data[, -ncol(tsne_data)])
+
+
+
+#methode 1: Matrice de Confusion
+# pour etudier la performance du modele
+library(caret)
+
+#Convert predictions and true values to factors with the same levels
+predictions <- as.factor(predictions_SVM_model)
+tsne_data$y <- as.factor(tsne_data$y)
+
+confusion_SVM_matrix <- confusionMatrix(predictions_SVM_model, tsne_data$y)
+confusion_SVM_matrix 
+
+#Reference
+# Prediction    1    2
+#         1 2800  365
+#         2    0    0
+
+#Accuracy : 0.8847         
+#95% CI : (0.873, 0.8956)
+#No Information Rate : 0.8847         
+#P-Value [Acc > NIR] : 0.5139         
+
+#Kappa : 0              
+
+#Mcnemar's Test P-Value : <2e-16         
+                                         
+#            Sensitivity : 1.0000         
+#            Specificity : 0.0000         
+#         Pos Pred Value : 0.8847         
+#         Neg Pred Value :    NaN         
+#             Prevalence : 0.8847         
+#         Detection Rate : 0.8847         
+#   Detection Prevalence : 1.0000         
+#      Balanced Accuracy : 0.5000         
+                                         
+#       'Positive' Class : 1  
+
+
+
+##########################################
+#### Methode 2: Courbe de roc
+# pour etidier la performance du modele SVM
+# Validation par la courbe ROC et AUC
+library(pROC)
+
+# Convertir les niveaux du prédicteur en valeurs numériques
+## on peut pas trouver la courbe de roc si la variable est de type facteur
+prediction_SVM_numeric <- as.numeric(as.character(predictions_SVM_model))
+
+# Calculer les mesures de performance pour la courbe ROC
+roc_SVM_data <- roc(as.numeric(as.character(tsne_data$y)), prediction_SVM_numeric)
+
+
+# Tracer le graphe ROC initial avec la première courbe
+plot.roc(roc_SVM_data , percent = TRUE, lwd = 4, col = "blue", print.auc = FALSE)
+text(0.3, 0.4, paste("AUC =", round(auc(roc_SVM_data ), 2)), col = "blue", cex = 1.2)
+
+
+# Ajouter une légende
+legend("bottomright", legend = "ANN sur data_numeric_scaled",
+       col = "blue", lwd = 2, cex = 0.6, xpd = TRUE, horiz = TRUE)
+
+
+
+
+###########################################################################
+########################## COURBE FINALE ###########################
+# Create a new plot
+plot.new()
+
+library(pROC)
+
+# Tracer le graphe ROC du modele DT :
+pdt_data=predict(dendrp_data, balanced_test,type="prob")
+Roc_DT_data= roc(balanced_test$y, pdt_data[,2])
+balanced_test$y=as.factor(balanced_test$y)
+plot.roc(Roc_DT_data, percent = TRUE, lwd = 4, col = "blue", print.auc = FALSE)
+text(0.3, 0.55, paste("AUC =", round(auc(Roc_DT_data), 2)), col = "blue", cex = 1.2)
+
+
+# Plot the initial ROC du modele RF :
+prediction_RF_data=predict(rf_data, balanced_test,type="prob")
+balanced_test$y <- as.factor(balanced_test$y)
+levels(balanced_test$y) <- c("0", "1")
+Roc_RF_data <- roc(as.numeric(balanced_test$y) - 1, as.numeric(prediction_RF_data[, 2]))
+plot.roc(Roc_RF_data, percent = TRUE, lwd = 4, col = "green", print.auc = FALSE, add=TRUE)
+text(0.3, 0.50, paste("AUC =", round(auc(Roc_RF_data), 2)), col = "green", cex = 1.2)
+
+
+# Tracer le graphe ROC du modele LR :
+predictions_LR_data <- predict(model_data, newdata = balanced_test, type = "response")
+Roc_LR_data <- roc(balanced_test$y, predictions_LR_data)
+plot.roc(Roc_LR_data, percent = TRUE, lwd = 4, col = "red", print.auc = FALSE, add=TRUE)
+text(0.3, 0.45, paste("AUC =", round(auc(Roc_LR_data), 2)), col = "red", cex = 1.2)
+
+
+# Tracer le graphe ROC du modele NB :
+predictions_NB_data <- predict(NB_model, newdata =test_features, type="raw")[,2]
+Roc_NB_data <- roc(balanced_test$y, predictions_NB_data)
+plot.roc(Roc_NB_data, percent = TRUE, lwd = 4, col = "orange", print.auc = FALSE, add=TRUE)
+text(0.3, 0.40, paste("AUC =", round(auc(Roc_NB_data), 2)), col = "orange", cex = 1.2)
+
+
+# Tracer le graphe ROC du modele One-R-algorithm :
+prediction_oneR_data <- predict(one_r_model, balanced_test, type = "prob")
+Roc_One_R_data <- roc(as.numeric(balanced_test$y) - 1, prediction_oneR_data[, 2])
+plot.roc(Roc_One_R_data, percent = TRUE, lwd = 4, col = "purple", print.auc = FALSE, add=TRUE)
+text(0.3, 0.35, paste("AUC =", round(auc(Roc_One_R_data), 2)), col = "purple", cex = 1.2)
+
+
+# Tracer le graphe ROC du modele KNN :
+probabilities_numeric <- ifelse(knn_model_numeric == "positive_class_label", 1, 0)
+roc_data_KNN_numeric <- roc(response = balanced_test_numeric$y, predictor = probabilities_numeric)
+plot.roc(roc_data_KNN_numeric, percent = TRUE, lwd = 4, col = "black", print.auc = FALSE, add=TRUE)
+text(0.3, 0.30, paste("AUC =", round(auc(roc_data_KNN_numeric), 2)), col = "black", cex = 1.2)
+
+
+# Tracer le graphe ROC du modele ANN :
+prediction_ANN_numeric <- as.numeric(as.character(prediction_ANN_model))
+roc_ANN_data <- roc(as.numeric(as.character(balanced_test_numeric_scaled$y)), prediction_ANN_numeric)
+plot.roc(roc_ANN_data , percent = TRUE, lwd = 4, col = "pink", print.auc = FALSE, add = TRUE)
+text(0.3, 0.25, paste("AUC =", round(auc(roc_ANN_data ), 2)), col = "pink", cex = 1.2)
+
+
+
+# Tracer le graphe ROC du modele SVM :
+predictions_SVM_model <- predict(svm_model, tsne_data[, -ncol(tsne_data)])
+prediction_SVM_numeric <- as.numeric(as.character(predictions_SVM_model))
+roc_SVM_data <- roc(as.numeric(as.character(tsne_data$y)), prediction_SVM_numeric)
+plot.roc(roc_SVM_data , percent = TRUE, lwd = 4, col = "gray", print.auc = FALSE, add=TRUE)
+text(0.3, 0.20, paste("AUC =", round(auc(roc_SVM_data ), 2)), col = "gray", cex = 1.2)
+
+
+# Ajouter une légende
+legend("bottomright", legend = c("DT", "RF", "LR", "NB", "One-R", "KNN", "ANN", "SVM"),
+       col = c("blue", "green", "red", "orange", "purple", "black", "pink", "gray"),
+       lwd = 2, cex = 0.6, xpd = TRUE, horiz = TRUE)
+
+
+
+
+##############################################################################
+######################## Temps D'execution ######################################
+library(microbenchmark)
+library("caret")
+timbag= microbenchmark(times=10,unit = "ms", 
+                       
+                       "DT MODELE"={dendri_data <- rpart(y~., data=balanced_train, 
+                                                         method="class",      control=rpart.control(minsplit=5,cp=0)) } ,
+                       
+                       "RF MODELE"={ ctrl <- trainControl(method = "cv", number = 5, verboseIter = FALSE)  
+                       rf_data <- train(y ~ ., data = balanced_train, method = "rf", trControl = ctrl) },   
+                       
+                       "LR MODELE"={model_data_reduced <- glm(y ~., data = balanced_train_reduced, family = binomial)} ,
+                       
+                       "NB MODELE"= {NB_model <- naiveBayes(train_features, train_labels)},
+                       
+                       "ONE-R MODELE"= {one_r_model <- OneR(balanced_train, verbose = TRUE)},
+                       
+                       "KNN MODELE"= {knn_model_numeric <- knn(train = x,test = y,
+                                                               cl = balanced_train_numeric$y,k = 5)},
+                       
+                       "ANN MODELE"={model_ANN_numeric_scaled <- nnet(y ~ .,                     
+                                                                      data=balanced_train_numeric_scaled , 
+                                                                      skip = TRUE, size = 0) },  
+                       
+                       "SVM MODELE"={svm_model <- svm(y ~ ., tsne_data, 
+                                                      type = "C-classification", 
+                                                      kernel = "polynomial",
+                                                      degree = 2, gamma = 3, cost = 0.7, coef0 = 0) }
+                       
+                       
+)
+
+#pour comparer graphiquement le temps de chaque modele en utilisant fct "autoplot"
+#pour trouver la moyenne de temps de chaque modele en utilisantfct "summary"
+### c'est le temps d'excusion de chaque methode
+autoplot(timbag)
+summary(timbag)
+
+#expr         min          lq
+#1    DT MODELE    617.8131    619.7488
+#2    RF MODELE 464071.5526 475315.2889
+#3    LR MODELE    124.6368    143.3551
+#4    NB MODELE     17.2113     17.8563
+#5 ONE-R MODELE     58.2629     65.4899
+#6   KNN MODELE   6372.2418   6379.3752
+#7   ANN MODELE    281.4024    300.9274
+#8   SVM MODELE     45.9550     46.1978
+#mean       median          uq
+#1    635.01084    626.73720    643.3902
+#2 482682.87500 480603.65350 491769.5943
+#3    157.18664    159.50290    170.1162
+#4     22.89908     18.36105     18.7216
+#5     71.25973     68.49065     71.1151
+#6   6528.52347   6568.88960   6626.5168
+#7    314.75139    306.91515    340.9251
+#8     47.10383     46.45085     46.9497
+#max neval cld
+#1    685.6950    10 ab 
+#2 503334.1681    10   c
+#3    196.3343    10  b 
+#4     64.2936    10  b 
+#5    107.2104    10  b 
+#6   6709.4158    10 a  
+#7    356.8964    10  b 
+#8     52.2234    10  b 
+
+
+#########################################################################
+###########################################################################
+#############################################################################
+
+
+
+######################## ACCURACY REPRESENTATION ###############################
+# Create a vector of accuracy values for the eight models
+accuracy <- c(0.6266, 0.6299, 0.8265, 0.7831, 0.7144, 0.6446, 0.7871, 0.8847)
+
+### GRAPHE 1 :
+par(mfrow=c(1,2))
+################### HISTOGRAM REPRESENTATION for ACCURACY ###########
+# Create a histogram
+hist(accuracy,breaks = 5, col = "skyblue",border = "white",xlab = "Accuracy",
+     ylab = "Frequency",main = "Accuracy of Eight Models")
+# Add labels to the x-axis
+axis(side = 1, at = seq(0.6, 0.9, 0.05))
+# Add a vertical line at the mean accuracy value
+abline(v = mean(accuracy), col = "red", lwd = 2)
+
+
+############ BOX PLOT REPRESENTATION for ACCURACY ###############
+# Create a box plot
+boxplot(accuracy,
+        col = "skyblue",
+        border = "black",
+        xlab = "Model",
+        ylab = "Accuracy",
+        main = "Accuracy of Eight Models")
+# Add a horizontal line at the overall mean accuracy value
+abline(h = mean(accuracy), col = "red", lwd = 2)
+
+
+
+### GRAPHE 2:
+################ BAR PLOT for ACCURACY #################
+# Charger la bibliothèque ggplot2
+library(ggplot2)
+# Créer un dataframe avec les données de votre tableau
+modele <- c("DT", "RF", "LR", "NB", "ONE-R", "KNN", "ANN", "SVM")
+accuracy <- c(0.6266, 0.6299, 0.8265, 0.7831, 0.7144, 0.6446, 0.7871, 0.8847)
+
+data <- data.frame(modele, accuracy)
+# Créer le graphique en barres
+bar_plot <- ggplot(data, aes(x = modele, y = accuracy)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(x = "Modèle", y = "Exactitude") +
+  ggtitle("Exactitude des modèles") +
+  theme_minimal()
+# Afficher le graphique
+print(bar_plot)
+
+
+
+### GRAPHE 3:
+############### DIAGRAMME CIRCULAIRE for ACCURACY ############
+# Charger la bibliothèque ggplot2
+library(ggplot2)
+
+# Créer un dataframe avec les données de votre tableau
+modele <- c("DT", "RF", "LR", "NB", "ONE-R", "KNN", "ANN", "SVM")
+accuracy <- c(0.6266, 0.6299, 0.8265, 0.7831, 0.7144, 0.6446, 0.7871, 0.8847)
+
+data <- data.frame(modele, accuracy)
+# Créer le graphique en secteurs avec la fréquence
+pie_chart <- ggplot(data, aes(x = "", y = accuracy, fill = modele)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  labs(fill = "Modèle", x = NULL, y = NULL) +
+  ggtitle("Comparaison des modèles") +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  geom_text(aes(label = paste0(round(accuracy * 100, 2), "%")), position = position_stack(vjust = 0.5))
+# Afficher le graphique
+print(pie_chart)
+
+
+### GRAPHE 4:
+###################################################
+############### graphe en ligne ##############
+# Créer le graphique en lignes
+line_chart <- ggplot(data, aes(x = modele, y = accuracy)) +
+  geom_line(color = "blue") +
+  geom_point(color = "blue", size = 3) +
+  labs(x = "Modèle", y = "Accuracy", title = "Comparaison des modèles") +
+  theme_minimal()
+
+# Afficher le graphique
+print(line_chart)
+
+
+
+
+
+
+##############################################################################
+##################### AUC GRAPH REPRESENTATION ###########################
+# Charger la bibliothèque ggplot2
+library(ggplot2)
+# Créer un dataframe avec les données de votre tableau
+modele <- c("DT", "RF", "LR", "NB", "ONE-R", "KNN", "ANN", "SVM")
+AUC_values <- c(0.63, 0.89,	0.86,	8.8,	0.72,	0.5,	0.79,	0.5)
+data <- data.frame(modele, accuracy)
+
+### GRAPHE 1:
+# Créer le graphique en secteurs avec la fréquence
+pie_chart <- ggplot(data, aes(x = "", y = AUC_values , fill = modele)) +
+  geom_bar(stat = "identity", width = 1) +
+  coord_polar("y", start = 0) +
+  labs(fill = "Modèle", x = NULL, y = NULL) +
+  ggtitle("Comparaison des modèles") +
+  theme_minimal() +
+  theme(legend.position = "right") +
+  geom_text(aes(label = paste0(round(accuracy * 100, 2), "%")), position = position_stack(vjust = 0.5))
+# Afficher le graphique
+print(pie_chart)
+
+
+
+### GRAPHE 2:
+# Créer le graphique en barres
+bar_plot <- ggplot(data, aes(x = modele, y = AUC_values)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(x = "Modèle", y = "AUC values") +
+  ggtitle("AUC values ") +
+  theme_minimal()
+# Afficher le graphique
+print(bar_plot)
+
+
+
+
+
+#################################################################
+################ TIME EXECUTION REPRESENTATION ###############
+#############################################################
+
+# Créer un dataframe avec les valeurs du temps d'exécution pour chaque modèle
+data <- data.frame(
+  Modele = c("DT", "RF", "LR", "NB", "ONE-R", "KNN", "ANN", "SVM"),
+  Temps_execution = c(617.8131, 464071.5526, 124.6368, 17.2113, 58.2629, 6372.2418, 281.4024, 45.9550)
+)
+
+
+### GRAPHE 1:
+# Créer le graphique à barres du temps d'exécution
+bar_chart <- ggplot(data, aes(x = Modele, y = Temps_execution)) +
+  geom_bar(stat = "identity", fill = "blue") +
+  labs(x = "Modèle", y = "Temps d'exécution", title = "Temps d'exécution des modèles") +
+  theme_minimal()
+# Afficher le graphique
+print(bar_chart)
+
+
+
+### GRAPHE 2:
+# Créer le graphique à lignes
+line_chart <- ggplot(data, aes(x = Modele, y = Temps_execution)) +
+  geom_line(color = "blue") +
+  geom_point(color = "blue", size = 3) +
+  labs(x = "Modèle", y = "Temps d'exécution", title = "Comparaison des temps d'exécution des modèles") +
+  theme_minimal()
+# Afficher le graphique
+print(line_chart)
